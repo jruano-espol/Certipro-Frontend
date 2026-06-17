@@ -1,0 +1,46 @@
+{% extends "frontend/base.html" %}
+
+{% block content %}
+    <h2 style="text-align: center;">
+        Selecciona tu perfil
+    </h2>
+    <p style="margin-top: 20px; margin-bottom: 40px;">
+        Elige el rol con el que deseas acceder al sistema.
+        Cada perfil tiene funcionalidades específicas adaptadas a sus responsabilidades.
+    </p>
+    <div class="row-of-cards">
+        <div>
+            <h3>Administrador</h3>
+            <p class="dim-text">
+                Gestiona criterios, tareas, asigna supervisores y equipos. Visualiza el progreso global.
+            </p>
+            <ul class="dim-text">
+                <li>Gestión de criterios y tareas</li>
+                <li>Asignación de equipos</li>
+                <li>Dashboards globales</li>
+            </ul>
+        </div>
+        <div>
+            <h3>Supervisor</h3>
+            <p class="dim-text">
+                Revisa evidencias enviadas, acepta o rechaza con retroalimentación. Monitorea el progreso.
+            </p>
+            <ul class="dim-text">
+                <li>Revisión de evidencias</li>
+                <li>Retroalimentación obligatoria</li>
+                <li>Seguimiento de avance</li>
+            </ul>
+        </div>
+        <div>
+            <h3>Miembro del equipo</h3>
+            <p class="dim-text">
+                Visualiza tareas asignadas, sube evidencias y recibe retroalimentación de su trabajo.
+            </p>
+            <ul class="dim-text">
+                <li>Visualización de tareas</li>
+                <li>Carga de evidencias</li>
+                <li>Historial de retroalimentación</li>
+            </ul>
+        </div>
+    </div>
+{% endblock %}
