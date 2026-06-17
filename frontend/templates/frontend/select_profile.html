@@ -1,6 +1,9 @@
 {% extends "frontend/base.html" %}
+{% load static %}
 
 {% block content %}
+    <link rel="stylesheet" href="{% static 'frontend/select_profile.css' %}">
+
     <h2 style="text-align: center;">
         Selecciona tu perfil
     </h2>
@@ -19,6 +22,12 @@
                 <li>Asignación de equipos</li>
                 <li>Dashboards globales</li>
             </ul>
+            <button
+                type="button"
+                class="card-action-button"
+                aria-label="Seleccionar Administrador"
+                style="background-image: url('{% static 'frontend/right-arrow.svg' %}');">
+            </button>
         </div>
         <div>
             <h3>Supervisor</h3>
@@ -30,6 +39,12 @@
                 <li>Retroalimentación obligatoria</li>
                 <li>Seguimiento de avance</li>
             </ul>
+            <button
+                type="button"
+                class="card-action-button"
+                aria-label="Seleccionar Supervisor"
+                style="background-image: url('{% static 'frontend/right-arrow.svg' %}');">
+            </button>
         </div>
         <div>
             <h3>Miembro del equipo</h3>
@@ -41,6 +56,12 @@
                 <li>Carga de evidencias</li>
                 <li>Historial de retroalimentación</li>
             </ul>
+            <button
+                type="button"
+                class="card-action-button"
+                aria-label="Seleccionar Miembro del equipo"
+                style="background-image: url('{% static 'frontend/right-arrow.svg' %}');">
+            </button>
         </div>
     </div>
 {% endblock %}

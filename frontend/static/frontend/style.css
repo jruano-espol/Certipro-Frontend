@@ -11,53 +11,15 @@ body {
   min-height: 100vh;
 }
 
+p {
+  line-height: 2; /* little bit of space between lines inside paragraphs */ 
+}
+
 main {
   flex: 1;
   align-items: center;
   margin-left: auto;
   margin-right: auto;
-}
-
-.row-of-cards {
-  display: flex;
-  align-items: stretch;
-  justify-content: space-around;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.row-of-cards > div {
-  display: flex;
-  flex-direction: column;
-  width: 300px;
-  min-width: 300px;
-  box-sizing: border-box;
-  flex: 0 0 300px; /* prevent flex container from growing/shrinking them */
-  margin: 0 12px;
-
-  border: 1px solid rgb(226, 228, 233);
-  border-radius: 8px;
-  background-clip: padding-box;
-
-  padding: 20px;
-
-  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
-  will-change: transform, border-color, box-shadow;
-}
-
-.row-of-cards > div:hover,
-.row-of-cards > div:focus {
-  transform: translateY(-6px);
-  border-color: rgb(19, 49, 108);
-  box-shadow: 0 8px 18px rgba(11,59,114,0.08);
-}
-
-.row-of-cards > div > ul > li::marker {
-  color: rgb(41, 163, 106);
-}
-
-.dim-text {
-  color: rgb(113, 125, 140);
 }
 
 footer {
