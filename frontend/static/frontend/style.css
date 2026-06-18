@@ -1,5 +1,16 @@
-html, body {
-  font-family: "Inter";
+:root{
+  --bg:#ffffff;
+  --muted:rgb(113, 125, 140);
+  --text:#0f1724;
+  --border:#e6e9ee;
+  --accent:#0b3b66;
+  --accent-2:#123b67;
+  --input-bg:#fff;
+  --radius:8px;
+}
+
+ html, body {
+  font-family: "Montserrat";
   margin: 0;
   padding: 0;
   height: 100%;

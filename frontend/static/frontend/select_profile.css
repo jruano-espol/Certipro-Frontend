@@ -16,12 +16,12 @@
   box-sizing: border-box;
   flex: 0 0 300px; /* prevent flex container from growing/shrinking them */
   margin: 0 12px;
+  padding: 20px;
 
   border: 1px solid rgb(226, 228, 233);
-  border-radius: 8px;
+  border-radius: 20px;
   background-clip: padding-box;
-
-  padding: 20px;
+  overflow: hidden;
 
   transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
   will-change: transform, border-color, box-shadow;
@@ -29,13 +29,16 @@
 
 .row-of-cards > div:hover,
 .row-of-cards > div:focus {
-  transform: translateY(-6px);
+  transform: translateY(-5px);
   border-color: rgb(19, 49, 108);
   box-shadow: 0 8px 18px rgba(11,59,114,0.08);
 }
 
+.row-of-cards > div > h3 { margin: 0.5rem; }
+.row-of-cards > div > p  { margin: 0.5rem; }
+
 .row-of-cards > div > ul > li {
-  margin-bottom: 0.75rem; /* little bit of space between list items */
+  margin-bottom: 0.5rem; /* little bit of space between list items */
 }
 
 .row-of-cards > div > ul > li::marker {
@@ -73,6 +76,6 @@
 }
 
 .dim-text {
-  color: rgb(113, 125, 140);
+  color: var(--muted);
 }
 
