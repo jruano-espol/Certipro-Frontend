@@ -17,7 +17,7 @@
       <div class="subtitle">Accediendo como <b>{{role}}</b></div>
     </div>
 
-    <form>
+    <form action="{% url 'dashboard' %}" method="get">
       <div class="field">
         <label for="email">Correo Electrónico</label>
         <div class="input" aria-hidden="false">

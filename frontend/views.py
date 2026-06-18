@@ -15,3 +15,6 @@ def login(request):
     assert(url_role in mapping)
     role = mapping.get(url_role, 'Administrador')
     return render(request, "frontend/login.html", {'role': role})
+
+def dashboard(request):
+    return render(request, "frontend/dashboard.html", {})
