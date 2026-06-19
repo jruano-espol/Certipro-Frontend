@@ -50,6 +50,10 @@
   visibility: visible;
 }
 
+.row-of-cards > div > button {
+  background-image: url("svgs/right-arrow.svg");
+}
+
 .card-action-button {
   opacity: 0;
   visibility: hidden;
