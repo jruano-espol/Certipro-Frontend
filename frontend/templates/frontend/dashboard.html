@@ -2,80 +2,114 @@
 {% load static %}
 
 {% block content %}
-    <link rel="stylesheet" href="{% static 'frontend/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'frontend/dashboard.css' %}">
 
-    <div class="dashboard-page">
-        <aside class="dashboard-sidebar">
-            <div class="sidebar-brand">
-                <img src="{% static 'frontend/svgs/certificate.svg'%}" width="32" height="32">
-                <div class="brand-text">
-                    <div class="brand-title">CertiPro</div>
-                    <div class="brand-subtitle">Gestión de Certificaciones</div>
+<div class="dashboard-page">
+    <aside class="dashboard-sidebar">
+        <div class="sidebar-brand">
+            <img src="{% static 'frontend/svgs/certificate.svg'%}" width="32" height="32">
+            <div class="brand-text">
+                <div class="brand-title">CertiPro</div>
+                <div class="brand-subtitle">Gestión de Certificaciones</div>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="#" class="sidebar-link active" onclick="event.preventDefault();">
+                <span>
+                    <img src="{% static 'frontend/svgs/dashboard.svg' %}" width="22" height="22">
+                </span>
+                <span>Panel Principal</span>
+            </a>
+            <a href="#" class="sidebar-link" onclick="event.preventDefault();">
+                <span>
+                    <img src="{% static 'frontend/svgs/medal-star.svg' %}" width="22" height="22">
+                </span>
+                <span>Modelos de Certificación</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-panel">
+                <div id="sidebar-user-avatar" class="user-avatar"></div>
+                <div class="user-info">
+                    <div id="sidebar-user-name" class="user-name"></div>
+                    <div id="sidebar-user-role" class="user-role"></div>
                 </div>
             </div>
+            <a href="#" id="log-out" class="sign-out">Cerrar Sesión</a>
+        </div>
+    </aside>
 
-            <nav class="sidebar-nav">
-                <a href="#" class="sidebar-link active" onclick="event.preventDefault();">
-                    <span>
-                        <img src="{% static 'frontend/svgs/dashboard.svg' %}" width="22" height="22">
-                    </span>
-                    <span>Panel Principal</span>
-                </a>
-                <a href="#" class="sidebar-link" onclick="event.preventDefault();">
-                    <span>
-                        <img src="{% static 'frontend/svgs/medal-star.svg' %}" width="22" height="22">
-                    </span>
-                    <span>Modelos de Certificación</span>
-                </a>
-            </nav>
-
-            <div class="sidebar-footer">
-                <div class="user-panel">
-                    <div class="user-avatar">CG</div>
-                    <div class="user-info">
-                        <div class="user-name">Carlos García</div>
-                        <div class="user-role">Administrador</div>
-                    </div>
-                </div>
-                <a href="#" class="sign-out" onclick="event.preventDefault();">Cerrar Sesión</a>
+    <main class="dashboard-main">
+        <header class="dashboard-header">
+            <div class="search-box">
+                <span>
+                    <img src="{% static 'frontend/svgs/search.svg' %}" width="22" height="22">
+                </span>
+                <input type="text" placeholder="Buscar criterios, tareas..." />
             </div>
-        </aside>
+            <div class="header-user">
+                <div id="header-user-name" class="header-user-name"></div>
+                <div id="header-user-role" class="header-user-role"></div>
+            </div>
+        </header>
 
-        <main class="dashboard-main">
-            <header class="dashboard-header">
-                <div class="search-box">
-                    <span>
-                        <img src="{% static 'frontend/svgs/search.svg' %}" width="22" height="22">
-                    </span>
-                    <input type="text" placeholder="Buscar criterios, tareas..." />
-                </div>
-                <div class="header-user">
-                    <div class="header-user-name">Carlos García</div>
-                    <div class="header-user-role">Administrador</div>
-                </div>
-            </header>
+        <section class="dashboard-content">
+            <div class="dashboard-card">
+                <h1>Panel Principal</h1>
+                <p>Resumen general de las certificaciones y la actividad reciente.</p>
+            </div>
 
-            <section class="dashboard-content">
-                <div class="dashboard-card">
-                    <h1>Panel Principal</h1>
-                    <p>Resumen general de las certificaciones y la actividad reciente.</p>
-                </div>
+            <div class="dashboard-widgets">
+                <article class="widget-card">
+                    <div class="widget-title">Certificaciones En Curso</div>
+                    <div class="widget-value">24</div>
+                </article>
+                <article class="widget-card">
+                    <div class="widget-title">Tareas Pendientes</div>
+                    <div class="widget-value">8</div>
+                </article>
+                <article class="widget-card">
+                    <div class="widget-title">Modelos Activos</div>
+                    <div class="widget-value">12</div>
+                </article>
+            </div>
+        </section>
+    </main>
+</div>
 
-                <div class="dashboard-widgets">
-                    <article class="widget-card">
-                        <div class="widget-title">Certificaciones En Curso</div>
-                        <div class="widget-value">24</div>
-                    </article>
-                    <article class="widget-card">
-                        <div class="widget-title">Tareas Pendientes</div>
-                        <div class="widget-value">8</div>
-                    </article>
-                    <article class="widget-card">
-                        <div class="widget-title">Modelos Activos</div>
-                        <div class="widget-value">12</div>
-                    </article>
-                </div>
-            </section>
-        </main>
-    </div>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const accessToken = localStorage.getItem('access_token');
+        const userMetadataStr = localStorage.getItem('user_metadata');
+
+        if (!accessToken || !userMetadataStr) {
+            localStorage.clear();
+            window.location.href = "{% url 'select_profile' %}";
+            return;
+        }
+
+        const user = JSON.parse(userMetadataStr);
+
+        // Generar las iniciales del avatar
+        const names = user.full_name.trim().split(" ");
+        const initials = names.length > 1 
+        ? (names[0][0] + names[names.length - 1][0]).toUpperCase()
+        : names[0][0].toUpperCase();
+
+        document.getElementById('sidebar-user-avatar').innerText = initials;
+        document.getElementById('sidebar-user-name').innerText = user.full_name;
+        document.getElementById('sidebar-user-role').innerText = user.role;
+
+        document.getElementById('header-user-name').innerText = user.full_name;
+        document.getElementById('header-user-role').innerText = user.role;
+
+        document.getElementById('log-out').addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.clear();
+            window.location.href = "{% url 'select_profile' %}";
+        });
+    });
+</script>
 {% endblock %}

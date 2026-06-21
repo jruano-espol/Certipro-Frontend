@@ -1,20 +1,28 @@
 from django.shortcuts import render
+from django.conf import settings
 
 # Create your views here.
-
 def select_profile(request):
     return render(request, "frontend/select_profile.html", {})
+
+api_url = settings.API_URL
 
 def login(request):
     url_role = request.GET.get('role', 'admin').lower()
     mapping = {
         'admin': 'Administrador',
         'supervisor': 'Supervisor',
-        'member': 'Miembro del equipo',
+        'member': 'Miembro de Equipo',
     }
     assert(url_role in mapping)
-    role = mapping.get(url_role, 'Administrador')
-    return render(request, "frontend/login.html", {'role': role})
+    role = mapping.get(url_role, 'Miembro de Equipo')    
+
+    context = {
+        'role': role,
+        'api_url': api_url,
+    }
+
+    return render(request, "frontend/login.html", context)
 
 def dashboard(request):
-    return render(request, "frontend/dashboard.html", {})
+    return render(request, "frontend/dashboard.html", {'api_url': api_url})

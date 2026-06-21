@@ -17,7 +17,11 @@
       <div class="subtitle">Accediendo como <b>{{role}}</b></div>
     </div>
 
-    <form action="{% url 'dashboard' %}" method="get">
+    <div id="error-message" 
+    style="color: #e63946; background-color: #ffe3e3; padding: 10px; border-radius: 6px; 
+    margin-bottom: 15px; display: none; font-size: 14px; border: 1px solid #e63946;"></div>
+
+    <form id="login-form">
       <div class="field">
         <label for="email">Correo Electrónico</label>
         <div class="input" aria-hidden="false">
@@ -53,4 +57,53 @@
 <footer class="dim-text">
     <small>CertiPro © 2026 - Proyecto Académico</small>
 </footer>
+
+<script>
+  document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const selectedRole = "{{ role }}";
+    const errorDiv = document.getElementById('error-message');
+
+    errorDiv.style.display = 'none';
+
+    try {
+      const response = await fetch("{{ api_url }}" + "/auth/login/", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          "email": email,
+          "password": password
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Correo o contraseña incorrectos.");
+      }
+
+      const data = await response.json();
+
+      if (data.user.role !== selectedRole.toUpperCase()) {
+        throw new Error(`Tu cuenta no tiene permisos para acceder como ${selectedRole}.`);
+      }
+
+      // Guardamos los tokens en el almacenamiento local del navegador
+      localStorage.setItem('access_token', data.access);
+      localStorage.setItem('refresh_token', data.refresh);
+      localStorage.setItem('user_metadata', JSON.stringify(data.user))
+
+      window.location.href = "{% url 'dashboard' %}";
+
+    } 
+    catch (error) {
+      errorDiv.innerText = error.message;
+      errorDiv.style.display = 'block';
+    }
+  });
+</script>
+
 {% endblock %}
