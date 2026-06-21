@@ -57,22 +57,48 @@
 
         <section class="dashboard-content">
             <div class="dashboard-card">
-                <h1>Panel Principal</h1>
-                <p>Resumen general de las certificaciones y la actividad reciente.</p>
+                <div>
+                    <h1>Panel Principal</h1>
+                    <p>Resumen general de las certificaciones y la actividad reciente.</p>
+                </div>
+                <div>
+                    <h1>Seleccione un Modelo</h1>
+                    <select id="models-select" class="models-select"> 
+                        <option value="">Seleccione un Modelo</option>                   
+                    </select>
+                </div>
             </div>
 
-            <div class="dashboard-widgets">
+            <div class="dashboard-widgets widgets-3-cols">
                 <article class="widget-card">
-                    <div class="widget-title">Certificaciones En Curso</div>
-                    <div class="widget-value">24</div>
+                    <div class="widget-title">Fecha Inicio</div>
+                    <div id="widget-start-date-value" class="widget-value">-</div>
+                </article>
+                <article class="widget-card">
+                    <div class="widget-title">Fecha Fin</div>
+                    <div id="widget-end-date-value" class="widget-value">-</div>
+                </article>
+                <article class="widget-card">
+                    <div class="widget-title">Proxima Fase</div>
+                    <div id="widget-next-period-value" class="widget-value">-</div>
+                </article>
+            </div>
+            <div class="dashboard-widgets widgets-4-cols">
+                <article class="widget-card">
+                    <div class="widget-title">Criterios</div>
+                    <div id="widget-number-criteria-value" class="widget-value">-</div>
+                </article>
+                <article class="widget-card">
+                    <div class="widget-title">Tareas Completadas</div>
+                    <div id="widget-completed-tasks-value" class="widget-value">-</div>
+                </article>
+                <article class="widget-card">
+                    <div class="widget-title">Tareas En Revisión</div>
+                    <div id="widget-in-review-tasks-value" class="widget-value">-</div>
                 </article>
                 <article class="widget-card">
                     <div class="widget-title">Tareas Pendientes</div>
-                    <div class="widget-value">8</div>
-                </article>
-                <article class="widget-card">
-                    <div class="widget-title">Modelos Activos</div>
-                    <div class="widget-value">12</div>
+                    <div id="widget-pending-tasks-value" class="widget-value">-</div>
                 </article>
             </div>
         </section>
@@ -80,7 +106,7 @@
 </div>
 
 <script>
-    document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", async () => {
         const accessToken = localStorage.getItem('access_token');
         const userMetadataStr = localStorage.getItem('user_metadata');
 
@@ -110,6 +136,127 @@
             localStorage.clear();
             window.location.href = "{% url 'select_profile' %}";
         });
+
+        const models_select = document.getElementById('models-select');
+
+        try {
+            const response = await fetch("{{ api_url }}" + "/certification_models/", {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+            if (!response.ok) throw new Error();
+            
+            const models = await response.json();
+
+            if (models.length === 0) {
+                models_select.innerHTML = '<option value="">No se encontraron modelos</option>';
+                return;
+            }
+
+            models_select.innerHTML = '<option value="">Seleccione un Modelo</option>';
+
+            models.forEach((m, idx) => {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.innerText = m.title;
+                models_select.appendChild(opt);
+            });
+
+            // Escuchar cambios en el dropdown para recargar datos
+            models_select.addEventListener('change', (e) => loadModelDetails(e.target.value));
+
+        } 
+        catch (err) {
+            console.error("Error cargando modelos de certificación:", err);
+        }
+
+        async function loadModelDetails(modelId) {
+            if (modelId == "") {
+                document.getElementById('widget-start-date-value').innerText = "-";
+                document.getElementById('widget-end-date-value').innerText = "-";
+                document.getElementById('widget-next-period-value').innerText = "-";
+                document.getElementById('widget-number-criteria-value').innerText = "-";
+                document.getElementById('widget-completed-tasks-value').innerText = "-";
+                document.getElementById('widget-in-review-tasks-value').innerText = "-";
+                document.getElementById('widget-pending-tasks-value').innerText = "-";
+                return;
+            }
+            if (!modelId) return;
+
+            try {
+                const [modelRes, criteriaRes, tasksRes] = await Promise.all([
+                    fetch(
+                        "{{ api_url }}" + `/certification_models/${modelId}/`, 
+                        {
+                            method: 'GET',
+                            headers: { 'Authorization': `Bearer ${accessToken}` }
+                        }
+                    ),
+                    fetch(
+                        "{{ api_url }}" + `/criteria/?certification_model=${modelId}/`, 
+                        { 
+                            method: 'GET',
+                            headers: { 'Authorization': `Bearer ${accessToken}` }
+                        }
+                    ),
+                    fetch(
+                        "{{ api_url }}" + "/tasks/", 
+                        { 
+                            method: 'GET',
+                            headers: { 'Authorization': `Bearer ${accessToken}` }
+                        }
+                    ) 
+                ]);
+
+                const modelData = await modelRes.json();
+                const criteriaData = await criteriaRes.json();
+                const allTasks = await tasksRes.json();
+
+                // Formatear fechas estéticamente (ej: "31 dic 2023")
+                const options = { day: 'numeric', month: 'short', year: 'numeric' };
+                document.getElementById('widget-start-date-value').innerText = new Date(modelData.start_date).toLocaleDateString('es-ES', options).replace('.', '');
+                document.getElementById('widget-end-date-value').innerText = new Date(modelData.end_date).toLocaleDateString('es-ES', options).replace('.', '');
+
+                // Evaluar estado basado en la fecha de fin de forma dinámica
+                /* const today = new Date();
+                const endDate = new Date(modelData.end_date);
+                const statusSpan = document.getElementById('model-status');
+                if (today > endDate) {
+                statusSpan.innerText = "Culminado";
+                statusSpan.className = "status-badge culminado";
+                } else {
+                statusSpan.innerText = "Activo";
+                statusSpan.className = "status-badge activo";
+                } */
+
+                // Filtrar tareas que pertenezcan a los criterios de ESTE modelo
+                const criteriaIds = criteriaData.map(c => c.id);
+                const modelTasks = allTasks.filter(t => criteriaIds.includes(t.criterion));
+
+                // Calcular contadores analíticos
+                const totalTasksCount = modelTasks.length;
+                const completedTasks = 0 // TODO 
+                const reviewTasks = 0 // TODO
+                const pendingTasks = totalTasksCount - completedTasks - reviewTasks;
+
+                document.getElementById('widget-number-criteria-value').innerText = criteriaData.length;
+                document.getElementById('widget-completed-tasks-value').innerText = completedTasks;
+                document.getElementById('widget-in-review-tasks-value').innerText = reviewTasks;
+                document.getElementById('widget-pending-tasks-value').innerText = pendingTasks;
+
+                // Calcular e inyectar Progreso Circular
+                // TODO
+                
+                // Pintar la Lista de Criterios (Fila Derecha)
+                // TODO
+
+            } 
+            catch (err) {
+                console.error("Error renderizando el dashboard dinámico:", err);
+            }
+        }
     });
 </script>
+
+
 {% endblock %}
