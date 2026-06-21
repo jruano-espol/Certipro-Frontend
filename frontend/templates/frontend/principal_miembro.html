@@ -1,0 +1,320 @@
+{% extends "frontend/base.html" %}
+{% load static %}
+
+{% block content %}
+    <link rel="stylesheet" href="{% static 'frontend/principal_miembro.css' %}">
+
+    <div class="dashboard-page">
+        <aside class="dashboard-sidebar">
+            <div class="sidebar-brand">
+                <img src="{% static 'frontend/svgs/certificate.svg' %}" width="32" height="32">
+                <div class="brand-text">
+                    <div class="brand-title">CertiPro</div>
+                    <div class="brand-subtitle">Gestión de Certificaciones</div>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="{% url 'principal_miembro' %}" class="sidebar-link active">
+                    <span><img src="{% static 'frontend/svgs/dashboard.svg' %}" width="22" height="22"></span>
+                    <span>Panel Principal</span>
+                </a>
+                <a href="{% url 'tareas' %}" class="sidebar-link">
+                    <span><img src="{% static 'frontend/svgs/tasks.svg' %}" width="22" height="22"></span>
+                    <span>Mis Tareas</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-panel">
+                    <div class="user-avatar">JM</div>
+                    <div class="user-info">
+                        <div class="user-name">Juan Martínez</div>
+                        <div class="user-role">Miembro del Equipo</div>
+                    </div>
+                </div>
+                <a href="#" class="sign-out" onclick="event.preventDefault();">
+                    <img src="{% static 'frontend/svgs/sign-out.svg' %}" width="16" height="16">
+                    Cerrar Sesión
+                </a>
+            </div>
+        </aside>
+
+        <main class="dashboard-main">
+            <header class="dashboard-header">
+                <div class="search-box">
+                    <span><img src="{% static 'frontend/svgs/search.svg' %}" width="22" height="22"></span>
+                    <input type="text" placeholder="Buscar criterios, tareas..." />
+                </div>
+                <div class="header-right">
+                    <div class="header-bell">
+                        <img src="{% static 'frontend/svgs/bell.svg' %}" width="20" height="20">
+                        <span class="bell-dot"></span>
+                    </div>
+                    <div class="header-user">
+                        <div class="header-user-name">Juan Martínez</div>
+                        <div class="header-user-role">Miembro del Equipo</div>
+                    </div>
+                </div>
+            </header>
+
+            <section class="panel-content">
+
+                {# Título #}
+                <div class="panel-heading">
+                    <h1>Mi Panel</h1>
+                    <p>Visualiza tus tareas asignadas y sube evidencias</p>
+                </div>
+
+                {# ---- Tarjetas de resumen ---- #}
+                <div class="stats-row">
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <div class="stat-label">Tareas Asignadas</div>
+                            <div class="stat-value" id="stat-total">—</div>
+                        </div>
+                        <div class="stat-icon stat-icon-blue">
+                            <svg width="22" height="22" viewBox="0 0 20 20" fill="none">
+                                <rect x="2" y="3" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.6" fill="none"/>
+                                <path d="M6 7h8M6 10h8M6 13h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <div class="stat-label">Completadas</div>
+                            <div class="stat-value" id="stat-completadas">—</div>
+                        </div>
+                        <div class="stat-icon stat-icon-green">
+                            <svg width="22" height="22" viewBox="0 0 20 20" fill="none">
+                                <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.6" fill="none"/>
+                                <path d="M6.5 10l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <div class="stat-label">Pendientes</div>
+                            <div class="stat-value" id="stat-pendientes">—</div>
+                        </div>
+                        <div class="stat-icon stat-icon-yellow">
+                            <svg width="22" height="22" viewBox="0 0 20 20" fill="none">
+                                <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.6" fill="none"/>
+                                <path d="M10 6v4.5l2.5 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                {# ---- Alerta de rechazadas ---- #}
+                <div class="alert-block alert-rechazadas" id="bloque-rechazadas" style="display:none;">
+                    <div class="alert-header">
+                        <span class="alert-icon">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                <circle cx="10" cy="10" r="9" stroke="#e05252" stroke-width="1.8"/>
+                                <line x1="10" y1="5.5" x2="10" y2="11" stroke="#e05252" stroke-width="1.8" stroke-linecap="round"/>
+                                <circle cx="10" cy="13.5" r="1" fill="#e05252"/>
+                            </svg>
+                        </span>
+                        <div>
+                            <div class="alert-title">Evidencias Rechazadas</div>
+                            <div class="alert-subtitle" id="alert-subtitle"></div>
+                        </div>
+                    </div>
+                    <div id="rechazadas-lista"></div>
+                </div>
+
+                {# ---- Cuerpo inferior: tareas + progreso ---- #}
+                <div class="panel-body">
+
+                    {# Lista de tareas resumida #}
+                    <div class="panel-tareas-section">
+                        <div class="panel-section-header">
+                            <span>
+                                <svg width="17" height="17" viewBox="0 0 20 20" fill="none">
+                                    <rect x="2" y="3" width="16" height="14" rx="2" stroke="#10203a" stroke-width="1.6" fill="none"/>
+                                    <path d="M6 7h8M6 10h8M6 13h4" stroke="#10203a" stroke-width="1.6" stroke-linecap="round"/>
+                                </svg>
+                            </span>
+                            <span class="panel-section-title">Mis Tareas</span>
+                        </div>
+
+                        <div class="panel-tareas-lista" id="panel-tareas-lista">
+                            {# Poblado por JS #}
+                        </div>
+                    </div>
+
+                    {# Columna de progreso — placeholder sin barras por ahora #}
+                    <div class="panel-progreso-section">
+                        <div class="panel-section-header">
+                            <span class="panel-section-title">Mi Progreso</span>
+                        </div>
+                        <div class="progreso-placeholder">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                                <circle cx="12" cy="12" r="9" stroke="#c8d5e8" stroke-width="1.6" fill="none"/>
+                                <path d="M12 8v4l2.5 2" stroke="#c8d5e8" stroke-width="1.6" stroke-linecap="round"/>
+                            </svg>
+                            Estadísticas de progreso próximamente
+                        </div>
+                    </div>
+
+                </div>
+
+            </section>
+        </main>
+    </div>
+
+<script>
+const API_URL = "{{ api_url }}";
+const TAREAS_URL = "{% url 'tareas' %}";
+
+async function apiFetch(path) {
+    const token = localStorage.getItem('access_token');
+    const res = await fetch(API_URL + path, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error(`Error ${res.status}`);
+    return res.json();
+}
+
+function iniciales(nombre) {
+    return nombre.split(' ').slice(0, 2).map(p => p[0]).join('').toUpperCase();
+}
+
+function formatearRol(rol) {
+    const map = {
+        'ADMINISTRADOR': 'Administrador',
+        'SUPERVISOR': 'Supervisor',
+        'MIEMBRO DE EQUIPO': 'Miembro del Equipo',
+    };
+    return map[rol] ?? rol;
+}
+
+function formatearFecha(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('es-EC', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function badgeHTML(estado) {
+    const map = {
+        'aceptado':  '<span class="badge badge-aceptado">Aceptado</span>',
+        'pendiente': '<span class="badge badge-pendiente">Pendiente</span>',
+        'rechazado': '<span class="badge badge-rechazado">Rechazado</span>',
+    };
+    return map[(estado ?? 'pendiente').toLowerCase()] ?? `<span class="badge">${estado}</span>`;
+}
+
+async function cargarPanel() {
+    try {
+        const user = JSON.parse(localStorage.getItem('user_metadata'));
+        if (user) {
+            document.querySelectorAll('.user-name, .header-user-name')
+                .forEach(el => el.textContent = user.full_name);
+            document.querySelectorAll('.user-role, .header-user-role')
+                .forEach(el => el.textContent = formatearRol(user.role));
+            document.querySelectorAll('.user-avatar')
+                .forEach(el => el.textContent = iniciales(user.full_name));
+        }
+
+        const tareas = await apiFetch('/tasks/');
+
+        // Estadísticas
+        const total = tareas.length;
+        const completadas = tareas.filter(t => (t.status ?? '').toLowerCase() === 'aceptado').length;
+        const pendientes = tareas.filter(t => (t.status ?? '').toLowerCase() === 'pendiente').length;
+
+        document.getElementById('stat-total').textContent = total;
+        document.getElementById('stat-completadas').textContent = completadas;
+        document.getElementById('stat-pendientes').textContent = pendientes;
+
+        renderTareas(tareas);
+
+        // Evidencias rechazadas
+        const evidencias = await apiFetch('/uploaded_evidences/');
+        const rechazadas = [];
+        for (const ev of evidencias) {
+            const feedbacks = await apiFetch(`/feedbacks/?uploaded_evidence=${ev.id}`);
+            const rechazo = feedbacks.find(f => f.result_type === 'REJECT');
+            if (rechazo) rechazadas.push({ evidencia: ev, feedback: rechazo });
+        }
+        renderRechazadas(rechazadas);
+
+    } catch (err) {
+        console.error('Error cargando panel:', err);
+    }
+}
+
+function renderTareas(tareas) {
+    const lista = document.getElementById('panel-tareas-lista');
+    lista.innerHTML = '';
+
+    if (!tareas.length) {
+        lista.innerHTML = '<p class="lista-vacia">No tienes tareas asignadas.</p>';
+        return;
+    }
+
+    for (const t of tareas) {
+        const fecha = formatearFecha(t.end_date);
+        const esPendiente = (t.status ?? '').toLowerCase() !== 'aceptado';
+
+        lista.insertAdjacentHTML('beforeend', `
+        <div class="panel-tarea-item" onclick="window.location.href='${TAREAS_URL}'" style="cursor:pointer;">
+            <div class="panel-tarea-top">
+                <span class="tarea-codigo">${t.criterion_code ?? ''}</span>
+                ${badgeHTML(t.status)}
+            </div>
+            <div class="tarea-nombre">${t.title}</div>
+            <div class="tarea-descripcion">${t.description ?? ''}</div>
+            <div class="panel-tarea-footer">
+                <span class="tarea-vence">
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                        <rect x="1" y="3" width="14" height="12" rx="2" stroke="#6b7f9f" stroke-width="1.4" fill="none"/>
+                        <path d="M5 1v3M11 1v3M1 7h14" stroke="#6b7f9f" stroke-width="1.4" stroke-linecap="round"/>
+                    </svg>
+                    Vence: ${fecha}
+                </span>
+                ${esPendiente ? `
+                <button class="btn-subir-evidencia" onclick="event.stopPropagation(); window.location.href='${TAREAS_URL}';">
+                    <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+                        <path d="M10 13V4m0 0L6.5 7.5M10 4l3.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M3 14v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                    Subir Evidencia
+                </button>` : ''}
+            </div>
+        </div>`);
+    }
+}
+
+function renderRechazadas(items) {
+    const bloque = document.getElementById('bloque-rechazadas');
+    if (!items.length) return;
+
+    bloque.style.display = 'flex';
+    document.getElementById('alert-subtitle').textContent =
+        `Tienes ${items.length} evidencia(s) rechazada(s) que requieren atención.`;
+
+    const lista = document.getElementById('rechazadas-lista');
+    for (const { evidencia, feedback } of items) {
+        lista.insertAdjacentHTML('beforeend', `
+        <div class="evidencia-rechazada-panel">
+            <div class="evidencia-rechazada-top">
+                <div class="evidencia-nombre">${evidencia.description}</div>
+                <span class="badge badge-rechazado">Rechazado</span>
+            </div>
+            <div class="evidencia-comentario">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;margin-top:2px;">
+                    <path d="M2 2h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H5l-3 2.5V3a1 1 0 0 1 1-1z" stroke="#6b7f9f" stroke-width="1.4" fill="none"/>
+                </svg>
+                <span>${feedback.comment}</span>
+            </div>
+        </div>`);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', cargarPanel);
+</script>
+
+{% endblock %}

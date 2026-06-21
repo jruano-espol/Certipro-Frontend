@@ -26,3 +26,9 @@ def login(request):
 
 def dashboard(request):
     return render(request, "frontend/dashboard.html", {'api_url': api_url})
+
+def tareas(request):
+    return render(request, "frontend/tareas.html", {'api_url': api_url})
+
+def principal_miembro(request):
+    return render(request, "frontend/principal_miembro.html", {'api_url': api_url})

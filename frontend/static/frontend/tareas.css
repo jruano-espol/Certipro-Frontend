@@ -1,0 +1,412 @@
+/* ============================================================
+   tareas.css
+   Ruta: frontend/static/frontend/tareas.css
+   Base: idéntica al dashboard.css, solo se añaden clases de contenido
+   ============================================================ */
+
+main {
+    margin: 0;
+}
+
+/* ---------- Layout (igual al dashboard) ---------- */
+.dashboard-page {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    min-height: calc(100vh - 0px);
+    background: #f4f6fb;
+    color: #10203a;
+}
+
+/* ---------- Sidebar (igual al dashboard) ---------- */
+.dashboard-sidebar {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 20px;
+    background: #151c28;
+    color: #eef2fa;
+    padding: 32px 0px;
+}
+
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding-left: 20px;
+    padding-right: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.brand-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.brand-subtitle {
+    font-size: 13px;
+    color: #9db0cf;
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-size: 0.9rem;
+    color: #d9e3f6;
+    font-weight: 500;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.sidebar-link.active { background: #1d344f; }
+.sidebar-link:hover  { background: #1a2332; }
+
+.sidebar-footer {
+    margin-top: auto;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding-top: 24px;
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+.user-panel {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.user-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #2e4a78;
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+    color: #fff;
+}
+
+.user-name  { font-weight: 700; font-size: 14px; }
+.user-role  { font-size: 12px; color: #9db0cf; }
+
+.sign-out {
+    display: inline-block;
+    color: #8dafda;
+    text-decoration: none;
+    font-size: 13px;
+}
+.sign-out:hover { color: #fff; }
+
+/* ---------- Main (igual al dashboard) ---------- */
+.dashboard-main {
+    padding: 0;
+    background: #ffffff;
+}
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #e2e4e9;
+    padding: 10px 30px;
+}
+
+.search-box {
+    display: flex;
+    flex-shrink: 1;
+    flex-basis: 500px;
+    min-width: 200px;
+    align-items: center;
+    padding: 10px 10px;
+    margin-right: 10px;
+    gap: 12px;
+    background: #f7f8f9;
+    border: 1px solid #626d841F;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(16, 32, 58, 0.06);
+}
+
+.search-box:focus-within {
+    border: 1px solid #151c28;
+}
+
+.search-box input {
+    font-family: var(--main-font);
+    width: 100%;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    color: #1d2d47;
+    background: transparent;
+}
+
+.header-user {
+    text-align: right;
+}
+
+.header-user-name {
+    font-weight: 700;
+    font-size: 15px;
+}
+
+.header-user-role {
+    font-size: 13px;
+    color: #6b7f9f;
+}
+
+/* ============================================================
+   CONTENIDO: Mis Tareas
+   Solo estas clases son nuevas respecto al dashboard
+   ============================================================ */
+
+.tareas-content {
+    display: grid;
+    padding: 0px 30px;
+    gap: 22px;
+}
+
+/* Título de sección — mismo estilo que .dashboard-card */
+.tareas-heading {
+    padding: 28px 0 0;
+}
+
+.tareas-heading h1 {
+    margin: 0 0 6px;
+    font-size: 26px;
+    font-weight: 700;
+    color: #10203a;
+}
+
+.tareas-heading p {
+    margin: 0;
+    color: #5c718f;
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+/* ---------- Bloque de alerta (rechazadas) ---------- */
+.alert-block {
+    border-radius: 14px;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.alert-rechazadas {
+    background: #fff5f5;
+    border: 1.5px solid #f5c6c6;
+}
+
+.alert-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+.alert-icon { flex-shrink: 0; margin-top: 2px; }
+
+.alert-title {
+    font-weight: 700;
+    font-size: 15px;
+    color: #c0392b;
+    margin-bottom: 3px;
+}
+
+.alert-subtitle {
+    font-size: 13px;
+    color: #7a4040;
+}
+
+/* Tarjeta de evidencia rechazada */
+.evidencia-rechazada {
+    background: #fff;
+    border: 1px solid #eac9c9;
+    border-radius: 10px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.evidencia-rechazada-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.evidencia-nombre {
+    font-weight: 700;
+    font-size: 14px;
+    color: #10203a;
+    margin-bottom: 3px;
+}
+
+.evidencia-tarea {
+    font-size: 12px;
+    color: #2563a8;
+}
+
+.evidencia-comentario {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 13px;
+    color: #5c718f;
+    line-height: 1.5;
+}
+
+.evidencia-actions { display: flex; gap: 10px; }
+
+/* ---------- Badges ---------- */
+.badge {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.badge-rechazado { background: #fdecea; color: #c0392b; border: 1px solid #f5c6c6; }
+.badge-aceptado  { background: #eafaf1; color: #1e7e34; border: 1px solid #b7eac6; }
+.badge-pendiente { background: #fff8e6; color: #b36d00; border: 1px solid #f5dfa0; }
+
+/* ---------- Botones ---------- */
+.btn-subir-nueva,
+.btn-subir-evidencia {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #151c28;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.btn-subir-nueva:hover,
+.btn-subir-evidencia:hover { background: #1d344f; }
+
+/* ---------- Lista de tareas ---------- */
+.tareas-lista-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-bottom: 30px;
+}
+
+.tareas-lista-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.tareas-lista-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #10203a;
+}
+
+.tareas-lista {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #e7edf7;
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+/* Ítem individual */
+.tarea-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 20px 24px;
+    background: #fff;
+    border-bottom: 1px solid #e7edf7;
+    transition: background 0.15s ease;
+}
+
+.tarea-item:last-child { border-bottom: none; }
+.tarea-item:hover { background: #f9fbff; }
+
+.tarea-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tarea-meta-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.tarea-codigo {
+    font-size: 12px;
+    font-weight: 600;
+    color: #2563a8;
+    letter-spacing: 0.02em;
+}
+
+.tarea-chevron { display: flex; align-items: center; cursor: pointer; }
+
+.tarea-nombre {
+    font-size: 15px;
+    font-weight: 700;
+    color: #10203a;
+}
+
+.tarea-descripcion {
+    font-size: 13px;
+    color: #5c718f;
+    line-height: 1.5;
+}
+
+.tarea-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+}
+
+.tarea-footer-left {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+.tarea-vence,
+.tarea-evidencias {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    color: #6b7f9f;
+}
+
+.tarea-ultima-evidencia {
+    font-size: 12px;
+    color: #9db0cf;
+    font-style: italic;
+    margin-top: 4px;
+}

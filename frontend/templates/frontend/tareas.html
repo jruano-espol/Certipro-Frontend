@@ -1,0 +1,741 @@
+{% extends "frontend/base.html" %}
+{% load static %}
+
+{% block content %}
+    <link rel="stylesheet" href="{% static 'frontend/tareas.css' %}">
+
+    <style>
+        /* ---- Vista detalle ---- */
+        .detalle-content {
+            display: none;
+            padding: 0 30px 40px;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .detalle-content.activo {
+            display: flex;
+        }
+
+        .detalle-volver {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #5c718f;
+            font-size: 14px;
+            font-weight: 500;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 28px 0 0;
+            text-decoration: none;
+        }
+
+        .detalle-volver:hover { color: #10203a; }
+
+        .detalle-encabezado {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+        }
+
+        .detalle-encabezado-left { display: flex; flex-direction: column; gap: 8px; }
+
+        .detalle-codigo {
+            font-size: 13px;
+            font-weight: 600;
+            color: #2563a8;
+        }
+
+        .detalle-titulo {
+            font-size: 26px;
+            font-weight: 700;
+            color: #10203a;
+            margin: 0;
+        }
+
+        .detalle-meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .detalle-vence {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: #6b7f9f;
+        }
+
+        /* ---- Card de descripción + asignación ---- */
+        .detalle-card {
+            border: 1px solid #e7edf7;
+            border-radius: 14px;
+            background: #fff;
+            overflow: hidden;
+        }
+
+        .detalle-card-section {
+            padding: 22px 26px;
+            border-bottom: 1px solid #e7edf7;
+        }
+
+        .detalle-card-section:last-child { border-bottom: none; }
+
+        .detalle-card-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: #10203a;
+            margin-bottom: 10px;
+        }
+
+        .detalle-descripcion-texto {
+            font-size: 14px;
+            color: #2563a8;
+            line-height: 1.6;
+        }
+
+        .detalle-asignacion {
+            display: flex;
+            gap: 28px;
+            flex-wrap: wrap;
+        }
+
+        .detalle-asignacion-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 13px;
+            color: #5c718f;
+        }
+
+        .detalle-asignacion-item strong { color: #10203a; }
+
+        /* ---- Sección evidencias ---- */
+        .detalle-evidencias-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0;
+        }
+
+        .detalle-evidencias-label {
+            font-size: 15px;
+            font-weight: 700;
+            color: #10203a;
+        }
+
+        .detalle-evidencias-count {
+            font-size: 13px;
+            color: #9db0cf;
+        }
+
+        /* Tarjeta de evidencia individual */
+        .evidencia-card {
+            border: 1px solid #e7edf7;
+            border-radius: 12px;
+            background: #fff;
+            padding: 18px 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .evidencia-card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .evidencia-card-nombre {
+            font-size: 14px;
+            font-weight: 700;
+            color: #10203a;
+            margin-bottom: 2px;
+        }
+
+        .evidencia-card-desc {
+            font-size: 13px;
+            color: #5c718f;
+        }
+
+        .evidencia-card-meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .evidencia-card-meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            color: #6b7f9f;
+        }
+
+        .evidencia-card-meta-item svg { flex-shrink: 0; }
+
+        .btn-descargar {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            background: #fff;
+            color: #10203a;
+            border: 1.5px solid #d0d9ea;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: border-color 0.2s, background 0.2s;
+            margin-top: 4px;
+            width: fit-content;
+        }
+
+        .btn-descargar:hover { background: #f4f6fb; border-color: #151c28; }
+
+        /* Estado vacío de evidencias */
+        .evidencias-vacio {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 48px 0;
+            gap: 10px;
+            color: #9db0cf;
+            font-size: 14px;
+        }
+
+        .evidencias-lista {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Sección de evidencias con su header */
+        .detalle-evidencias-section {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Ocultar vista lista cuando detalle está activo */
+        .tareas-content.oculto { display: none; }
+
+        /* Header bell */
+        .header-bell {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .bell-dot {
+            position: absolute;
+            top: 0; right: 0;
+            width: 8px; height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            border: 1.5px solid #fff;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+    </style>
+
+    <div class="dashboard-page">
+        <aside class="dashboard-sidebar">
+            <div class="sidebar-brand">
+                <img src="{% static 'frontend/svgs/certificate.svg' %}" width="32" height="32">
+                <div class="brand-text">
+                    <div class="brand-title">CertiPro</div>
+                    <div class="brand-subtitle">Gestión de Certificaciones</div>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="#" class="sidebar-link" onclick="event.preventDefault();">
+                    <span><img src="{% static 'frontend/svgs/dashboard.svg' %}" width="22" height="22"></span>
+                    <span>Panel Principal</span>
+                </a>
+                <a href="#" class="sidebar-link active" onclick="event.preventDefault();">
+                    <span><img src="{% static 'frontend/svgs/tasks.svg' %}" width="22" height="22"></span>
+                    <span>Mis Tareas</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-panel">
+                    <div class="user-avatar">JM</div>
+                    <div class="user-info">
+                        <div class="user-name">Juan Martínez</div>
+                        <div class="user-role">Miembro del Equipo</div>
+                    </div>
+                </div>
+                <a href="#" class="sign-out" onclick="event.preventDefault();">
+                    <img src="{% static 'frontend/svgs/sign-out.svg' %}" width="16" height="16">
+                    Cerrar Sesión
+                </a>
+            </div>
+        </aside>
+
+        <main class="dashboard-main">
+            <header class="dashboard-header">
+                <div class="search-box">
+                    <span><img src="{% static 'frontend/svgs/search.svg' %}" width="22" height="22"></span>
+                    <input type="text" placeholder="Buscar criterios, tareas..." />
+                </div>
+                <div class="header-right">
+                    <div class="header-bell">
+                        <img src="{% static 'frontend/svgs/bell.svg' %}" width="20" height="20">
+                        <span class="bell-dot"></span>
+                    </div>
+                    <div class="header-user">
+                        <div class="header-user-name">Juan Martínez</div>
+                        <div class="header-user-role">Miembro del Equipo</div>
+                    </div>
+                </div>
+            </header>
+
+            {# ============================================================ #}
+            {# VISTA LISTA                                                    #}
+            {# ============================================================ #}
+            <section class="tareas-content" id="vista-lista">
+
+                <div class="tareas-heading">
+                    <h1>Mis Tareas</h1>
+                    <p>Visualiza tus tareas asignadas y sube evidencias</p>
+                </div>
+
+                {# Bloque rechazadas — JS lo oculta si no hay ninguna #}
+                <div class="alert-block alert-rechazadas" id="bloque-rechazadas">
+                    <div class="alert-header">
+                        <span class="alert-icon">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                <circle cx="10" cy="10" r="9" stroke="#e05252" stroke-width="1.8"/>
+                                <line x1="10" y1="5.5" x2="10" y2="11" stroke="#e05252" stroke-width="1.8" stroke-linecap="round"/>
+                                <circle cx="10" cy="13.5" r="1" fill="#e05252"/>
+                            </svg>
+                        </span>
+                        <div>
+                            <div class="alert-title">Evidencias que Requieren Atención</div>
+                            <div class="alert-subtitle">Las siguientes evidencias fueron rechazadas y necesitan correcciones.</div>
+                        </div>
+                    </div>
+                    {# Poblado dinámicamente por renderRechazadas() #}
+                </div>
+
+                <div class="tareas-lista-section">
+                    <div class="tareas-lista-header">
+                        <span>
+                            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                                <rect x="2" y="3" width="16" height="14" rx="2" stroke="#10203a" stroke-width="1.6" fill="none"/>
+                                <path d="M6 7h8M6 10h8M6 13h4" stroke="#10203a" stroke-width="1.6" stroke-linecap="round"/>
+                            </svg>
+                        </span>
+                        <span class="tareas-lista-title">Tareas Asignadas</span>
+                    </div>
+
+                    <div class="tareas-lista" id="tareas-lista">
+                        {# Poblado dinámicamente por renderTareas() #}
+                    </div>
+                </div>
+
+            </section>
+
+            {# ============================================================ #}
+            {# VISTA DETALLE — oculta por defecto                            #}
+            {# ============================================================ #}
+            <section class="detalle-content" id="vista-detalle">
+
+                <button class="detalle-volver" onclick="volverALista()">
+                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                        <path d="M11 15L6 10l5-5" stroke="#5c718f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Volver
+                </button>
+
+                {# Encabezado de la tarea #}
+                <div class="detalle-encabezado">
+                    <div class="detalle-encabezado-left">
+                        <div class="detalle-codigo" id="detalle-codigo"></div>
+                        <h1 class="detalle-titulo" id="detalle-titulo"></h1>
+                        <div class="detalle-meta">
+                            <span id="detalle-badge"></span>
+                            <span class="detalle-vence">
+                                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                                    <rect x="1" y="3" width="14" height="12" rx="2" stroke="#6b7f9f" stroke-width="1.4" fill="none"/>
+                                    <path d="M5 1v3M11 1v3M1 7h14" stroke="#6b7f9f" stroke-width="1.4" stroke-linecap="round"/>
+                                </svg>
+                                Vence: <span id="detalle-fecha"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <button class="btn-subir-evidencia" id="btn-subir-detalle" onclick="abrirSubida()">
+                        <svg width="15" height="15" viewBox="0 0 20 20" fill="none">
+                            <path d="M10 13V4m0 0L6.5 7.5M10 4l3.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M3 14v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                        </svg>
+                        Subir Evidencia
+                    </button>
+                </div>
+
+                {# Card descripción + asignación #}
+                <div class="detalle-card">
+                    <div class="detalle-card-section">
+                        <div class="detalle-card-label">Descripción</div>
+                        <div class="detalle-descripcion-texto" id="detalle-descripcion"></div>
+                    </div>
+                    <div class="detalle-card-section">
+                        <div class="detalle-asignacion" id="detalle-asignacion">
+                            {# Poblado por JS #}
+                        </div>
+                    </div>
+                </div>
+
+                {# Sección evidencias presentadas #}
+                <div class="detalle-evidencias-section">
+                    <div class="detalle-evidencias-header">
+                        <span class="detalle-evidencias-label">Evidencias Presentadas</span>
+                        <span class="detalle-evidencias-count" id="detalle-ev-count"></span>
+                    </div>
+                    <div class="detalle-card">
+                        <div class="detalle-card-section" id="detalle-evidencias-lista">
+                            {# Poblado por JS #}
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+        </main>
+    </div>
+
+<script>
+const API_URL = "{{ api_url }}";
+let tareaActivaId = null;
+
+/* ── Helpers ─────────────────────────────────────────────── */
+
+async function apiFetch(path) {
+    const token = localStorage.getItem('access_token');
+    const res = await fetch(API_URL + path, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error(`Error ${res.status}`);
+    return res.json();
+}
+
+function iniciales(nombre) {
+    return nombre.split(' ').slice(0, 2).map(p => p[0]).join('').toUpperCase();
+}
+
+function formatearRol(rol) {
+    const map = {
+        'ADMINISTRADOR': 'Administrador',
+        'SUPERVISOR': 'Supervisor',
+        'MIEMBRO DE EQUIPO': 'Miembro del Equipo',
+    };
+    return map[rol] ?? rol;
+}
+
+function formatearFecha(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('es-EC', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function badgeHTML(estado) {
+    const map = {
+        'aceptado':  '<span class="badge badge-aceptado">Aceptado</span>',
+        'pendiente': '<span class="badge badge-pendiente">Pendiente</span>',
+        'rechazado': '<span class="badge badge-rechazado">Rechazado</span>',
+    };
+    return map[(estado ?? 'pendiente').toLowerCase()] ?? `<span class="badge">${estado}</span>`;
+}
+
+/* ── Navegación lista ↔ detalle ──────────────────────────── */
+
+function abrirDetalle(tareaId) {
+    tareaActivaId = tareaId;
+    document.getElementById('vista-lista').classList.add('oculto');
+    document.getElementById('vista-detalle').classList.add('activo');
+    cargarDetalle(tareaId);
+}
+
+function volverALista() {
+    tareaActivaId = null;
+    document.getElementById('vista-detalle').classList.remove('activo');
+    document.getElementById('vista-lista').classList.remove('oculto');
+}
+
+/* ── Carga inicial: lista de tareas ──────────────────────── */
+
+async function cargarTareas() {
+    try {
+        const user = JSON.parse(localStorage.getItem('user_metadata'));
+        if (user) {
+            document.querySelectorAll('.user-name, .header-user-name')
+                .forEach(el => el.textContent = user.full_name);
+            document.querySelectorAll('.user-role, .header-user-role')
+                .forEach(el => el.textContent = formatearRol(user.role));
+            document.querySelectorAll('.user-avatar')
+                .forEach(el => el.textContent = iniciales(user.full_name));
+        }
+
+        const tareas = await apiFetch('/tasks/');
+        renderTareas(tareas);
+
+        // Evidencias rechazadas
+        const evidencias = await apiFetch('/uploaded_evidences/');
+        const rechazadas = [];
+        for (const ev of evidencias) {
+            const feedbacks = await apiFetch(`/feedbacks/?uploaded_evidence=${ev.id}`);
+            const rechazo = feedbacks.find(f => f.result_type === 'REJECT');
+            if (rechazo) rechazadas.push({ evidencia: ev, feedback: rechazo });
+        }
+        renderRechazadas(rechazadas);
+
+    } catch (err) {
+        console.error('Error cargando tareas:', err);
+    }
+}
+
+function renderTareas(tareas) {
+    const lista = document.getElementById('tareas-lista');
+    lista.innerHTML = '';
+
+    if (!tareas.length) {
+        lista.innerHTML = '<p style="color:#6b7f9f;padding:1.5rem;">No tienes tareas asignadas.</p>';
+        return;
+    }
+
+    for (const t of tareas) {
+        const fecha = formatearFecha(t.end_date);
+        const evCount = t.uploaded_evidences_count ?? 0;
+        const ultimaEv = t.ultima_evidencia ?? null;
+
+        lista.insertAdjacentHTML('beforeend', `
+        <div class="tarea-item" onclick="abrirDetalle(${t.id})" style="cursor:pointer;">
+            <div class="tarea-top">
+                <div class="tarea-meta-left">
+                    <span class="tarea-codigo">${t.criterion_code ?? ''}</span>
+                </div>
+                <div class="tarea-meta-right">
+                    ${badgeHTML(t.status)}
+                    <span class="tarea-chevron">
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                            <path d="M7.5 5l5 5-5 5" stroke="#9db0cf" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                </div>
+            </div>
+            <div class="tarea-nombre">${t.title}</div>
+            <div class="tarea-descripcion">${t.description ?? ''}</div>
+            <div class="tarea-footer">
+                <div class="tarea-footer-left">
+                    <span class="tarea-vence">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                            <rect x="1" y="3" width="14" height="12" rx="2" stroke="#6b7f9f" stroke-width="1.4" fill="none"/>
+                            <path d="M5 1v3M11 1v3M1 7h14" stroke="#6b7f9f" stroke-width="1.4" stroke-linecap="round"/>
+                        </svg>
+                        Vence: ${fecha}
+                    </span>
+                    <span class="tarea-evidencias">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                            <path d="M3 2h7l3 3v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" stroke="#6b7f9f" stroke-width="1.4" fill="none"/>
+                            <path d="M10 2v4h4" stroke="#6b7f9f" stroke-width="1.4"/>
+                        </svg>
+                        ${evCount} evidencia(s)
+                    </span>
+                </div>
+                ${evCount === 0 ? `
+                <div class="tarea-footer-right">
+                    <button class="btn-subir-evidencia" onclick="event.stopPropagation(); tareaActivaId=${t.id}; abrirSubida();">
+                        <svg width="15" height="15" viewBox="0 0 20 20" fill="none">
+                            <path d="M10 13V4m0 0L6.5 7.5M10 4l3.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M3 14v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                        </svg>
+                        Subir Evidencia
+                    </button>
+                </div>` : ''}
+            </div>
+            ${ultimaEv ? `<div class="tarea-ultima-evidencia">Última evidencia: ${ultimaEv}</div>` : ''}
+        </div>`);
+    }
+}
+
+function renderRechazadas(items) {
+    const bloque = document.getElementById('bloque-rechazadas');
+    if (!items.length) { bloque.style.display = 'none'; return; }
+
+    for (const { evidencia, feedback } of items) {
+        bloque.insertAdjacentHTML('beforeend', `
+        <div class="evidencia-rechazada">
+            <div class="evidencia-rechazada-top">
+                <div>
+                    <div class="evidencia-nombre">${evidencia.description}</div>
+                    <div class="evidencia-tarea">Tarea ID: ${evidencia.task}</div>
+                </div>
+                <span class="badge badge-rechazado">Rechazado</span>
+            </div>
+            <div class="evidencia-comentario">
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;margin-top:2px;">
+                    <path d="M2 2h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H5l-3 2.5V3a1 1 0 0 1 1-1z" stroke="#6b7f9f" stroke-width="1.4" fill="none"/>
+                </svg>
+                <span>${feedback.comment}</span>
+            </div>
+            <div class="evidencia-actions">
+                <button class="btn-subir-nueva" onclick="tareaActivaId=${evidencia.task}; abrirSubida();">
+                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                        <path d="M10 13V4m0 0L6.5 7.5M10 4l3.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M3 14v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                    Subir Nueva Evidencia
+                </button>
+            </div>
+        </div>`);
+    }
+}
+
+/* ── Carga del detalle de una tarea ──────────────────────── */
+
+async function cargarDetalle(tareaId) {
+    try {
+        // Limpiar estado anterior
+        document.getElementById('detalle-codigo').textContent = '';
+        document.getElementById('detalle-titulo').textContent = 'Cargando...';
+        document.getElementById('detalle-badge').innerHTML = '';
+        document.getElementById('detalle-fecha').textContent = '';
+        document.getElementById('detalle-descripcion').textContent = '';
+        document.getElementById('detalle-asignacion').innerHTML = '';
+        document.getElementById('detalle-evidencias-lista').innerHTML = '';
+        document.getElementById('detalle-ev-count').textContent = '';
+
+        const tarea = await apiFetch(`/tasks/${tareaId}/`);
+        const evidencias = await apiFetch(`/uploaded_evidences/?task=${tareaId}`);
+
+        // Encabezado
+        document.getElementById('detalle-codigo').textContent = tarea.criterion_code ?? '';
+        document.getElementById('detalle-titulo').textContent = tarea.title;
+        document.getElementById('detalle-badge').innerHTML = badgeHTML(tarea.status);
+        document.getElementById('detalle-fecha').textContent = formatearFecha(tarea.end_date);
+
+        // Descripción
+        document.getElementById('detalle-descripcion').textContent = tarea.description ?? '—';
+
+        // Asignación
+        document.getElementById('detalle-asignacion').innerHTML = `
+            <span class="detalle-asignacion-item">
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+                    <circle cx="8" cy="5" r="3" stroke="#6b7f9f" stroke-width="1.3" fill="none"/>
+                    <path d="M2 14c0-3 2.686-5 6-5s6 2 6 5" stroke="#6b7f9f" stroke-width="1.3" stroke-linecap="round" fill="none"/>
+                </svg>
+                Asignado a: <strong>${tarea.assignee_name ?? 'N/A'}</strong>
+            </span>
+            <span class="detalle-asignacion-item">
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+                    <path d="M3 2h7l3 3v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" stroke="#6b7f9f" stroke-width="1.3" fill="none"/>
+                    <path d="M10 2v4h4" stroke="#6b7f9f" stroke-width="1.3"/>
+                </svg>
+                Criterio: <strong>${tarea.criterion_title ?? tarea.criterion ?? 'N/A'}</strong>
+            </span>`;
+
+        // Evidencias
+        const contenedor = document.getElementById('detalle-evidencias-lista');
+        document.getElementById('detalle-ev-count').textContent = `${evidencias.length} archivo(s)`;
+
+        if (!evidencias.length) {
+            contenedor.innerHTML = `
+            <div class="evidencias-vacio">
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                    <path d="M10 6h13l9 9v20a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" stroke="#c8d5e8" stroke-width="1.6" fill="none"/>
+                    <path d="M23 6v10h10" stroke="#c8d5e8" stroke-width="1.6"/>
+                </svg>
+                No hay evidencias presentadas aún
+            </div>`;
+            return;
+        }
+
+        let listaHTML = '<div class="evidencias-lista">';
+        for (const ev of evidencias) {
+            // Buscar feedback para saber el estado de esta evidencia
+            const feedbacks = await apiFetch(`/feedbacks/?uploaded_evidence=${ev.id}`);
+            const ultimoFeedback = feedbacks[feedbacks.length - 1];
+            const estadoEv = ultimoFeedback
+                ? (ultimoFeedback.result_type === 'APPROVE' ? 'aceptado' : 'rechazado')
+                : 'pendiente';
+
+            const nombreArchivo = ev.file_path ? ev.file_path.split('/').pop() : 'archivo';
+            const fechaSubida = formatearFecha(ev.created_at ?? ev.uploaded_at);
+            const uploader = ev.uploader_name ?? 'N/A';
+
+            listaHTML += `
+            <div class="evidencia-card">
+                <div class="evidencia-card-top">
+                    <div>
+                        <div class="evidencia-card-nombre">${ev.description}</div>
+                        <div class="evidencia-card-desc">${ev.required_evidence_title ?? ''}</div>
+                    </div>
+                    ${badgeHTML(estadoEv)}
+                </div>
+                <div class="evidencia-card-meta">
+                    <span class="evidencia-card-meta-item">
+                        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                            <path d="M3 2h7l3 3v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" stroke="#6b7f9f" stroke-width="1.3" fill="none"/>
+                            <path d="M10 2v4h4" stroke="#6b7f9f" stroke-width="1.3"/>
+                        </svg>
+                        ${nombreArchivo}
+                    </span>
+                    <span class="evidencia-card-meta-item">
+                        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                            <circle cx="8" cy="5" r="2.5" stroke="#6b7f9f" stroke-width="1.3" fill="none"/>
+                            <path d="M2 14c0-2.8 2.686-4.5 6-4.5s6 1.7 6 4.5" stroke="#6b7f9f" stroke-width="1.3" stroke-linecap="round" fill="none"/>
+                        </svg>
+                        ${uploader}
+                    </span>
+                    <span class="evidencia-card-meta-item">
+                        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                            <rect x="1" y="3" width="14" height="12" rx="2" stroke="#6b7f9f" stroke-width="1.3" fill="none"/>
+                            <path d="M5 1v3M11 1v3M1 7h14" stroke="#6b7f9f" stroke-width="1.3" stroke-linecap="round"/>
+                        </svg>
+                        ${fechaSubida}
+                    </span>
+                </div>
+                ${ev.file_url ? `
+                <a href="${ev.file_url}" class="btn-descargar" target="_blank" download>
+                    <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+                        <path d="M10 4v9m0 0l-3.5-3.5M10 13l3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M3 14v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                    Descargar
+                </a>` : ''}
+            </div>`;
+        }
+        listaHTML += '</div>';
+        contenedor.innerHTML = listaHTML;
+
+    } catch (err) {
+        console.error('Error cargando detalle:', err);
+    }
+}
+
+/* ── Subida de evidencia (placeholder para modal) ────────── */
+
+function abrirSubida() {
+    // TODO: abrir modal con formulario multipart/form-data
+    // POST a /uploaded_evidences/ con campos:
+    //   description, task (tareaActivaId), required_evidence, file_path
+    console.log('Subir evidencia para tarea:', tareaActivaId);
+    alert(`Modal de subida — tarea ${tareaActivaId} (pendiente de implementar)`);
+}
+
+/* ── Init ─────────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', cargarTareas);
+</script>
+
+{% endblock %}
