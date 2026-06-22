@@ -40,7 +40,7 @@
       </div>
 
       <div class="form-actions">
-        <button type="button" class="secondary-button">Cancelar</button>
+        <button type="button" class="secondary-button" id="cancel-button">Cancelar</button>
         <button type="submit" class="primary-button">Crear Modelo</button>
       </div>
     </form>
@@ -49,9 +49,24 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', () => {
+    const accessToken = localStorage.getItem('access_token');
+    const userMetadataStr = localStorage.getItem('user_metadata');
+
+    if (!accessToken || !userMetadataStr) {
+      localStorage.clear();
+      window.location.href = "{% url 'select_profile' %}";
+      return;
+    }
+
     const periodsGrid = document.querySelector('.periods-grid');
     const addPeriodButton = document.querySelector('.add-period');
+    const certificationForm = document.querySelector('.certification-form');
     const trashIcon = "{% static 'frontend/svgs/trash.svg' %}";
+    const cancelButton = document.getElementById('cancel-button');
+
+    cancelButton.addEventListener('click', () => {
+      window.location.href = "{% url 'certification_models' %}";
+    });
 
     function createPeriodItem(index) {
       const item = document.createElement('div');
@@ -114,6 +129,50 @@
       if (periodItem) {
         periodItem.remove();
         refreshPeriodLabels();
+      }
+    });
+
+    certificationForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const modelTitle = document.getElementById('model-title').value.trim();
+      const accreditorName = document.getElementById('accreditor-name').value.trim();
+      const startDate = document.getElementById('start-date').value;
+      const endDate = document.getElementById('end-date').value;
+
+      // Validate required fields
+      if (!modelTitle || !accreditorName || !startDate || !endDate) {
+        alert('Por favor, complete todos los campos requeridos.');
+        return;
+      }
+
+      const payload = {
+        title: modelTitle,
+        accreditor: accreditorName,
+        start_date: startDate,
+        end_date: endDate
+      };
+
+      try {
+        const response = await fetch("{{api_url}}" + "/certification_models/", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+          alert('Modelo de certificación creado exitosamente.');
+          window.location.href = "{% url 'certification_models' %}";
+        } else {
+          const errorData = await response.json();
+          alert(`Error al crear el modelo: ${errorData.detail || 'Error desconocido'}`);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Ocurrió un error al crear el modelo de certificación.');
       }
     });
   });
