@@ -239,7 +239,6 @@
                 document.getElementById('widget-next-period-value').style.fontSize = "18px"; // Ajuste sutil por si el nombre de la fase es largo
                 document.getElementById('widget-next-period-value').innerText = displayFase;
 
-                console.log("Modelo: ", modelId, " - Criterios: ", criteriaData)
                 // Filtrar tareas que pertenezcan a los criterios de ESTE modelo
                 const criteriaIds = criteriaData.map(c => c.id);
                 const modelTasks = allTasks.filter(t => criteriaIds.includes(t.criterion));
