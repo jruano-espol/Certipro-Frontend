@@ -1,0 +1,405 @@
+/* ============================================================
+   principal_miembro.css
+   Ruta: frontend/static/frontend/principal_miembro.css
+   Base: idéntica a tareas.css, solo se añaden clases de contenido
+   ============================================================ */
+
+main { margin: 0; }
+
+/* ---------- Layout ---------- */
+.dashboard-page {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    min-height: 100vh;
+    background: #f4f6fb;
+    color: #10203a;
+}
+
+/* ---------- Sidebar ---------- */
+.dashboard-sidebar {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 20px;
+    background: #151c28;
+    color: #eef2fa;
+    padding: 32px 0;
+}
+
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 20px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.brand-title  { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.brand-subtitle { font-size: 13px; color: #9db0cf; }
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 0 20px;
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-size: 0.9rem;
+    color: #d9e3f6;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+.sidebar-link.active { background: #1d344f; }
+.sidebar-link:hover  { background: #1a2332; }
+
+.sidebar-footer {
+    margin-top: auto;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding: 24px 20px 0;
+}
+
+.user-panel {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.user-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #2e4a78;
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+    color: #fff;
+}
+
+.user-name  { font-weight: 700; font-size: 14px; }
+.user-role  { font-size: 12px; color: #9db0cf; }
+
+.sign-out {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #8dafda;
+    text-decoration: none;
+    font-size: 13px;
+}
+.sign-out:hover { color: #fff; }
+
+/* ---------- Main ---------- */
+.dashboard-main {
+    padding: 0;
+    background: #fff;
+    overflow-y: auto;
+}
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e2e4e9;
+    padding: 10px 30px;
+}
+
+.search-box {
+    display: flex;
+    flex-shrink: 1;
+    flex-basis: 500px;
+    min-width: 200px;
+    align-items: center;
+    padding: 10px;
+    margin-right: 10px;
+    gap: 12px;
+    background: #f7f8f9;
+    border: 1px solid #626d841f;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(16,32,58,0.06);
+}
+
+.search-box:focus-within { border-color: #151c28; }
+
+.search-box input {
+    font-family: inherit;
+    width: 100%;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    color: #1d2d47;
+    background: transparent;
+}
+
+.header-right { display: flex; align-items: center; gap: 18px; }
+.header-user  { text-align: right; }
+.header-user-name { font-weight: 700; font-size: 15px; }
+.header-user-role { font-size: 13px; color: #6b7f9f; }
+
+.header-bell {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.bell-dot {
+    position: absolute;
+    top: 0; right: 0;
+    width: 8px; height: 8px;
+    background: #22c55e;
+    border-radius: 50%;
+    border: 1.5px solid #fff;
+}
+
+/* ============================================================
+   CONTENIDO: Panel Principal
+   ============================================================ */
+
+.panel-content {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    padding: 0 30px 40px;
+}
+
+.panel-heading { padding-top: 28px; }
+.panel-heading h1 { margin: 0 0 6px; font-size: 26px; font-weight: 700; color: #10203a; }
+.panel-heading p  { margin: 0; color: #5c718f; font-size: 14px; line-height: 1.7; }
+
+/* ---------- Tarjetas de estadísticas ---------- */
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.stat-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff;
+    border: 1px solid #e7edf7;
+    border-radius: 14px;
+    padding: 20px 22px;
+}
+
+.stat-label { font-size: 13px; color: #6b7f9f; margin-bottom: 8px; }
+.stat-value { font-size: 32px; font-weight: 700; color: #10203a; line-height: 1; }
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+}
+
+.stat-icon-blue   { background: #eff4ff; color: #2563a8; }
+.stat-icon-green  { background: #eafaf1; color: #1e7e34; }
+.stat-icon-yellow { background: #fff8e6; color: #b36d00; }
+
+/* ---------- Alerta rechazadas ---------- */
+.alert-block {
+    border-radius: 14px;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.alert-rechazadas {
+    background: #fff5f5;
+    border: 1.5px solid #f5c6c6;
+}
+
+.alert-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+.alert-icon { flex-shrink: 0; margin-top: 2px; }
+.alert-title { font-weight: 700; font-size: 15px; color: #c0392b; margin-bottom: 3px; }
+.alert-subtitle { font-size: 13px; color: #7a4040; }
+
+.evidencia-rechazada-panel {
+    background: #fff;
+    border: 1px solid #eac9c9;
+    border-radius: 10px;
+    padding: 14px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.evidencia-rechazada-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.evidencia-nombre { font-weight: 700; font-size: 14px; color: #10203a; }
+
+.evidencia-comentario {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 13px;
+    color: #5c718f;
+    line-height: 1.5;
+}
+
+/* ---------- Badges ---------- */
+.badge {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.badge-rechazado { background: #fdecea; color: #c0392b; border: 1px solid #f5c6c6; }
+.badge-aceptado  { background: #eafaf1; color: #1e7e34; border: 1px solid #b7eac6; }
+.badge-pendiente { background: #fff8e6; color: #b36d00; border: 1px solid #f5dfa0; }
+
+/* ---------- Cuerpo inferior ---------- */
+.panel-body {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 20px;
+    align-items: start;
+}
+
+/* Sección de tareas */
+.panel-tareas-section {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    border: 1px solid #e7edf7;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.panel-section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 18px 22px;
+    border-bottom: 1px solid #e7edf7;
+}
+
+.panel-section-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #10203a;
+}
+
+.panel-tareas-lista { display: flex; flex-direction: column; }
+
+.panel-tarea-item {
+    padding: 18px 22px;
+    border-bottom: 1px solid #e7edf7;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    transition: background 0.15s;
+}
+
+.panel-tarea-item:last-child { border-bottom: none; }
+.panel-tarea-item:hover { background: #f9fbff; }
+
+.panel-tarea-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tarea-codigo {
+    font-size: 12px;
+    font-weight: 600;
+    color: #2563a8;
+    letter-spacing: 0.02em;
+}
+
+.tarea-nombre {
+    font-size: 14px;
+    font-weight: 700;
+    color: #10203a;
+}
+
+.tarea-descripcion {
+    font-size: 13px;
+    color: #5c718f;
+    line-height: 1.5;
+}
+
+.panel-tarea-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 6px;
+}
+
+.tarea-vence {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    color: #6b7f9f;
+}
+
+/* Botón subir */
+.btn-subir-evidencia {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: #151c28;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-subir-evidencia:hover { background: #1d344f; }
+
+.lista-vacia { color: #6b7f9f; padding: 1.5rem 22px; font-size: 14px; }
+
+/* Sección de progreso */
+.panel-progreso-section {
+    border: 1px solid #e7edf7;
+    border-radius: 14px;
+    background: #fff;
+    overflow: hidden;
+}
+
+.panel-progreso-section .panel-section-header {
+    border-bottom: 1px solid #e7edf7;
+}
+
+.progreso-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 40px 20px;
+    color: #9db0cf;
+    font-size: 13px;
+    text-align: center;
+}
