@@ -14,5 +14,13 @@
         <main>
             {% block content %}{% endblock %}
         </main>
+
+        <script>
+            window.API_BASE_URL = "{{ api_url }}";
+        </script>
+
+        <script src="{% static 'frontend/js/api_utils.js' %}"></script>
+        
+        {% block extra_js %}{% endblock %}
     </body>
 </html>
