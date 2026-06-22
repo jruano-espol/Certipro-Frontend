@@ -171,87 +171,31 @@
         }
 
         async function loadModelDetails(modelId) {
-            if (modelId == "") {
-                document.getElementById('widget-start-date-value').innerText = "-";
-                document.getElementById('widget-end-date-value').innerText = "-";
-                document.getElementById('widget-next-period-value').innerText = "-";
-                document.getElementById("widget-next-period-title").innerText = "Próxima Fase"
-                document.getElementById('widget-number-criteria-value').innerText = "-";
-                document.getElementById('widget-completed-tasks-value').innerText = "-";
-                document.getElementById('widget-in-review-tasks-value').innerText = "-";
-                document.getElementById('widget-pending-tasks-value').innerText = "-";
-                return;
-            }
+            document.getElementById('widget-start-date-value').innerText = "-";
+            document.getElementById('widget-end-date-value').innerText = "-";
+            document.getElementById('widget-next-period-value').innerText = "-";
+            document.getElementById("widget-next-period-title").innerText = "Próxima Fase"
+            document.getElementById('widget-number-criteria-value').innerText = "-";
+            document.getElementById('widget-completed-tasks-value').innerText = "-";
+            document.getElementById('widget-in-review-tasks-value').innerText = "-";
+            document.getElementById('widget-pending-tasks-value').innerText = "-";
+                
             if (!modelId) return;
 
             try {
-                const [
-                    modelRes, 
-                    criteriaRes, 
-                    tasksRes, 
-                    periodsRes, 
-                    reqEvidencesRes, 
-                    uploadedEvidencesRes,
-                    feedbacksRes
-                ] = await Promise.all([
-                    fetch(
-                        "{{ api_url }}" + `/certification_models/${modelId}/`, 
-                        {
-                            method: 'GET',
-                            headers: { 'Authorization': `Bearer ${accessToken}` }
-                        }
-                    ),
-                    fetch(
-                        "{{ api_url }}" + `/criteria/?certification_model=${modelId}/`, 
-                        { 
-                            method: 'GET',
-                            headers: { 'Authorization': `Bearer ${accessToken}` }
-                        }
-                    ),
-                    fetch(
-                        "{{ api_url }}" + "/tasks/", 
-                        { 
-                            method: 'GET',
-                            headers: { 'Authorization': `Bearer ${accessToken}` }
-                        }
-                    ),
-                    fetch(
-                        "{{ api_url }}" + `/periods/?certification_model=${modelId}`, 
-                        {
-                            method: 'GET', 
-                            headers: { 'Authorization': `Bearer ${accessToken}` } 
-                        }
-                    ),
-                    fetch(
-                        "{{ api_url }}" + "/required_evidences/", 
-                        { 
-                            method: 'GET', 
-                            headers: { 'Authorization': `Bearer ${accessToken}` } 
-                        }
-                    ),
-                    fetch(
-                        "{{ api_url }}" + "/uploaded_evidences/", 
-                        { 
-                            method: 'GET', 
-                            headers: { 'Authorization': `Bearer ${accessToken}` } 
-                        }
-                    ),
-                    fetch(
-                        "{{ api_url }}" + "/feedbacks/", 
-                        { 
-                            method: 'GET', 
-                            headers: { 'Authorization': `Bearer ${accessToken}` } 
-                        }
-                    )
-                ]);
-
-                const modelData = await modelRes.json();
-                const criteriaData = await criteriaRes.json();
-                const allTasks = await tasksRes.json();
-                const periodsData = await periodsRes.json();
-                const allReqEvidences = await reqEvidencesRes.json();
-                const allUploadedEvidences = await uploadedEvidencesRes.json();
-                const allFeedbacks = await feedbacksRes.json();
+                const modelData = await API_UTILS.get_by_id(
+                    "/certification_models/", modelId
+                );
+                const criteriaData = await API_UTILS.get_filter_by_column(
+                    "/criteria/", "certification_model", modelId
+                );
+                const allTasks = await API_UTILS.get("/tasks/");
+                const periodsData = await API_UTILS.get_filter_by_column(
+                    "/periods/", "certification_model", modelId
+                );
+                const allReqEvidences = await API_UTILS.get("/required_evidences/");
+                const allUploadedEvidences = await API_UTILS.get("/uploaded_evidences/");
+                const allFeedbacks = await API_UTILS.get("/feedbacks/");
 
                 // Formatear fechas estéticamente (ej: "31 dic 2023")
                 const options = { day: 'numeric', month: 'short', year: 'numeric' };
@@ -295,6 +239,7 @@
                 document.getElementById('widget-next-period-value').style.fontSize = "18px"; // Ajuste sutil por si el nombre de la fase es largo
                 document.getElementById('widget-next-period-value').innerText = displayFase;
 
+                console.log("Modelo: ", modelId, " - Criterios: ", criteriaData)
                 // Filtrar tareas que pertenezcan a los criterios de ESTE modelo
                 const criteriaIds = criteriaData.map(c => c.id);
                 const modelTasks = allTasks.filter(t => criteriaIds.includes(t.criterion));
@@ -323,7 +268,6 @@
                         .sort((a, b) => b.id - a.id); 
 
                         const mostRecentUpload = uploadedForThisReq[0];
-                        console.log("Most Recent Upload: ", mostRecentUpload)
 
                         // Si nunca han subido nada, marcamos que no tiene feedback y no está aprobada
                         if (!mostRecentUpload) {
