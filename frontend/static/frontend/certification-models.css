@@ -1,0 +1,31 @@
+#nuevo_modelo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #2a457b;
+    color: #fff;
+    border: 0;
+    padding: 10px 10px;
+    border-radius: 5px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.certification-header {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px;
+    background: #fff;
+}
+
+#certification-header-title {
+    margin: 0;
+}
+
+#certification-header-subtitle {
+    margin: 0;
+}

@@ -1,0 +1,186 @@
+main {
+    margin: 0;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+.page-shell {
+  width: min(100%, 900px);
+  margin: 40px auto;
+  padding: 0 20px;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid rgba(15, 23, 36, 0.08);
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(15, 23, 36, 0.08);
+  padding: 32px 32px 24px;
+}
+
+.card h1 {
+  margin: 0 0 28px;
+  font-size: 1.5rem;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.certification-form {
+  display: grid;
+  gap: 22px;
+}
+
+.field-group {
+  display: grid;
+  gap: 10px;
+}
+
+.field-group label {
+  font-size: 0.97rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.field-group label span {
+  color: #d43c3c;
+  margin-left: 4px;
+}
+
+.field-group input {
+  width: 100%;
+  min-height: 46px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--input-bg);
+  color: var(--text);
+  font-size: 0.96rem;
+}
+
+.field-group input::placeholder {
+  color: var(--muted);
+}
+
+.date-row {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.periods-section {
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid rgba(15, 23, 36, 0.08);
+  border-radius: 20px;
+  background: #fbfdff;
+}
+
+.periods-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.periods-header h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.add-period {
+  border: 1px solid rgba(15, 23, 36, 0.1);
+  background: #fff;
+  color: var(--accent);
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+.periods-grid {
+  display: grid;
+  gap: 18px;
+  width: 100%;
+}
+
+.period-item {
+  position: relative;
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+  padding: 18px 20px 20px;
+  border: 1px solid rgba(15, 23, 36, 0.08);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.remove-period {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remove-period img {
+  display: block;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.form-actions .secondary-button,
+.form-actions .primary-button {
+  min-width: 126px;
+  padding: 12px 20px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.secondary-button {
+  background: #ffffff;
+  color: var(--text);
+  border: 1px solid rgba(15, 23, 36, 0.1);
+}
+
+.primary-button {
+  background: var(--accent);
+  color: #fff;
+}
+
+@media (max-width: 720px) {
+  .date-row,
+  .period-item {
+    grid-template-columns: 1fr;
+  }
+
+  .form-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .form-actions .secondary-button,
+  .form-actions .primary-button {
+    width: 100%;
+  }
+}

@@ -27,6 +27,12 @@ def login(request):
 def dashboard(request):
     return render(request, "frontend/dashboard.html", {'api_url': api_url})
 
+def certification_models(request):
+    return render(request, "frontend/certification-models.html", {'api_url': api_url})
+
+def new_certification_model(request):
+    return render(request, "frontend/new-certification-model.html", {'api_url': api_url})
+
 def tareas(request):
     return render(request, "frontend/tareas.html", {'api_url': api_url})
 

@@ -1,0 +1,121 @@
+{% extends "frontend/base.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'frontend/new-certification-model.css' %}">
+
+<main class="page-shell">
+  <section class="card">
+    <h1>Nuevo Modelo de Certificación</h1>
+
+    <form class="certification-form" novalidate>
+      <div class="field-group">
+        <label for="model-title">Título del Modelo <span>*</span></label>
+        <input id="model-title" type="text" placeholder="Ej: ISO 9001:2015 - Sistema de Gestión de Calidad">
+      </div>
+
+      <div class="field-group">
+        <label for="accreditor-name">Nombre del Acreditador <span>*</span></label>
+        <input id="accreditor-name" type="text" placeholder="Ej: International Organization for Standardization">
+      </div>
+
+      <div class="date-row">
+        <div class="field-group">
+          <label for="start-date">Fecha de Inicio <span>*</span></label>
+          <input id="start-date" type="date">
+        </div>
+        <div class="field-group">
+          <label for="end-date">Fecha de Fin <span>*</span></label>
+          <input id="end-date" type="date">
+        </div>
+      </div>
+
+      <div class="periods-section">
+        <div class="periods-header">
+          <h2>Periodos de Evaluación</h2>
+          <button type="button" class="add-period">+ Agregar Periodo</button>
+        </div>
+
+        <div class="periods-grid"></div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="secondary-button">Cancelar</button>
+        <button type="submit" class="primary-button">Crear Modelo</button>
+      </div>
+    </form>
+  </section>
+</main>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const periodsGrid = document.querySelector('.periods-grid');
+    const addPeriodButton = document.querySelector('.add-period');
+    const trashIcon = "{% static 'frontend/svgs/trash.svg' %}";
+
+    function createPeriodItem(index) {
+      const item = document.createElement('div');
+      item.className = 'period-item';
+      item.innerHTML = `
+        <button type="button" class="remove-period">
+          <img src="${trashIcon}" width="16" height="16" alt="Eliminar periodo">
+        </button>
+
+        <div class="field-group">
+          <label for="period-${index}-start">Inicio del periodo ${index}</label>
+          <input id="period-${index}-start" name="period-${index}-start" type="date">
+        </div>
+
+        <div class="field-group">
+          <label for="period-${index}-end">Fin del periodo ${index}</label>
+          <input id="period-${index}-end" name="period-${index}-end" type="date">
+        </div>
+      `;
+      return item;
+    }
+
+    function refreshPeriodLabels() {
+      Array.from(periodsGrid.querySelectorAll('.period-item')).forEach((item, idx) => {
+        const index = idx + 1;
+        const startLabel = item.querySelector('label[for$="-start"]');
+        const endLabel = item.querySelector('label[for$="-end"]');
+        const startInput = item.querySelector('input[id$="-start"]');
+        const endInput = item.querySelector('input[id$="-end"]');
+
+        if (startLabel) {
+          startLabel.textContent = `Inicio del periodo ${index}`;
+          startLabel.htmlFor = `period-${index}-start`;
+        }
+        if (endLabel) {
+          endLabel.textContent = `Fin del periodo ${index}`;
+          endLabel.htmlFor = `period-${index}-end`;
+        }
+        if (startInput) {
+          startInput.id = `period-${index}-start`;
+          startInput.name = `period-${index}-start`;
+        }
+        if (endInput) {
+          endInput.id = `period-${index}-end`;
+          endInput.name = `period-${index}-end`;
+        }
+      });
+    }
+
+    addPeriodButton.addEventListener('click', () => {
+      const nextIndex = periodsGrid.children.length + 1;
+      periodsGrid.appendChild(createPeriodItem(nextIndex));
+    });
+
+    periodsGrid.addEventListener('click', (event) => {
+      const removeButton = event.target.closest('.remove-period');
+      if (!removeButton) return;
+
+      const periodItem = removeButton.closest('.period-item');
+      if (periodItem) {
+        periodItem.remove();
+        refreshPeriodLabels();
+      }
+    });
+  });
+</script>
+{% endblock %}
