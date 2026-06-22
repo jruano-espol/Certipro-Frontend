@@ -115,82 +115,52 @@
             window.location.href = "{% url 'select_profile' %}";
         });
 
-        async function loadTasks() {
-            try {
-                const response = await fetch("{{api_url}}"+"/tasks/", {
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`
-                    }
-                });
+        const widgetValues = document.querySelectorAll('.widget-card .widget-value');
+        console.assert(widgetValues.length === 3);
 
-                if (!response.ok) {
-                    console.error('Task fetch failed', response.status);
-                    return;
-                }
+        let currentUser = await API_UTILS.get_filter_by_column(
+            "/users/", "username", user.username
+        );
+        currentUser = currentUser.length > 0 ? currentUser[0] : null;
+        
+        const currentUserWorkgroup = await API_UTILS.get_filter_by_column(
+            "/work_group_members/", "user", currentUser.id
+        );
+        
+        const userTasks = [];
+        for (const workgroup of currentUserWorkgroup) {
+            const workgroupTasks = await API_UTILS.get_filter_by_column(
+                "/tasks/", "group_responsible", workgroup.workgroup
+            );
+            userTasks.push(...workgroupTasks);
+        }
+        widgetValues[0].innerText = userTasks.length;
+        
+        let completedCount = 0;
+        let pendingCount = 0;
 
-                const data = await response.json();
-                const tasks = Array.isArray(data) ? data : data.results || [];
-                return tasks;
-            } catch (error) {
-                console.error('Error loading tasks:', error);
-                return [];
+        let uploadedEvidencesOfTask = {};
+        for (const task of userTasks) {
+            const evidences = await API_UTILS.get_filter_by_column(
+                "/uploaded_evidences/", "task", task.id
+            );
+            for (let evidence of evidences) {
+                const feedbacks = await API_UTILS.get_filter_by_column(
+                    "/feedbacks/", "uploaded_evidence_id", evidence.id
+                );
+                evidence.feedbacks = feedbacks;
+                evidence.is_approved = feedbacks.every(feedback => feedback.result_type === "APPROVED");
+            }
+            uploadedEvidencesOfTask[task.id] = evidences;
+
+            if (evidences.length > 0 && evidences.every(evidence => evidence.is_approved)) {
+                completedCount++;
+            } else {
+                pendingCount++;
             }
         }
-
-        let tasks = await loadTasks();
-        console.log('Loaded tasks:', tasks);
-
-        async function loadTaskWidgets() {
-            const totalTasks = tasks.length;
-
-            let completedTasks = 0;
-            let pendingTasks = 0;
-
-            tasks.forEach((task) => {
-                if (typeof task.completed !== "undefined") {
-                    if (task.completed) completedTasks++;
-                    else pendingTasks++;
-                } else if (task.status) {
-                    const status = String(task.status).toLowerCase();
-                    if (status === "completed" || status === "done" || status === "finalized") completedTasks++;
-                    else pendingTasks++;
-                }
-            });
-
-            if (!tasks.some(task => typeof task.completed !== "undefined" || task.status)) {
-                pendingTasks = totalTasks;
-            }
-
-            const widgetValues = document.querySelectorAll('.widget-card .widget-value');
-            if (widgetValues.length >= 3) {
-                widgetValues[0].innerText = totalTasks;
-                widgetValues[1].innerText = completedTasks;
-                widgetValues[2].innerText = pendingTasks;
-            }
-        }
-
-        async function loadUserTasks() {
-            try {
-                const response = await fetch("{{api_url}}"+"/users/", {
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`
-                    }
-                });
-
-                if (!response.ok) {
-                    console.error('Task fetch failed', response.status);
-                    return;
-                }
-
-                const data = await response.json();
-                console.log(data);
-            } catch (error) {
-                console.error('Error loading users:', error);
-            }
-        }
-
-        loadTaskWidgets();
-        loadUserTasks();
+        widgetValues[1].innerText = completedCount;
+        widgetValues[2].innerText = pendingCount;
     });
 </script>
 
