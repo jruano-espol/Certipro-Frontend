@@ -36,6 +36,9 @@ def certification_models(request):
 def new_certification_model(request):
     return render(request, "frontend/new-certification-model.html", {'api_url': api_url})
 
+def upload_evidence(request):
+    return render(request, "frontend/upload-evidence.html", {'api_url': api_url})
+
 def tareas(request):
     return render(request, "frontend/tareas.html", {'api_url': api_url})
 

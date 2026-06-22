@@ -54,6 +54,16 @@
     white-space: nowrap;
 }
 
+.task-status-in-progress {
+    background: #f3feff;
+    color: #1f59f8c4;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
 .task-status-pending {
     background: #fef5e7;
     color: #f8b21f;
@@ -79,5 +89,35 @@
     display: flex;
     align-items: center;
     gap: 8px;
+}
+
+.task-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.task-upload-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border: none;
+    border-radius: 10px;
+    background: #13316c;
+    color: #ffffff;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Montserrat';
+    transition: background 0.2s ease;
+}
+
+.task-upload-btn img {
+    display: block;
+}
+
+.task-upload-btn:hover {
+    background: #29447a;
 }
 

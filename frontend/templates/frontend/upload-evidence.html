@@ -1,0 +1,111 @@
+{% extends "frontend/base.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'frontend/style.css' %}">
+<link rel="stylesheet" href="{% static 'frontend/upload-evidence.css' %}">
+
+<div class="page-wrap">
+  <div class="page-header">
+    <a class="back-link">←</a>
+    <div class="page-criteria">Código del Criterio</div>
+    <h1 class="page-title">Título</h1>
+    <p class="page-sub">Descripción</p>
+  </div>
+
+  <div class="card upload-card">
+    <div class="card-title">
+      <span class="card-icon">
+        <img src="{% static 'frontend/svgs/upload.svg' %}" class="upload-icon" width="16" height="16">
+      </span>
+      <h2>Subir Nueva Evidencia</h2>
+    </div>
+
+    <form id="evidence-form" class="evidence-form" onsubmit="return false;">
+      <label class="field-label">Archivo de Evidencia</label>
+
+      <div class="upload-area" id="uploadArea" tabindex="0">
+        <input id="fileInput" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,image/*" hidden>
+        <img src="{% static 'frontend/svgs/upload.svg' %}" class="upload-icon" width="32" height="32">
+        <div class="upload-text">
+          <div class="upload-title">Haz clic para seleccionar un archivo</div>
+          <div class="upload-sub">PDF, Word, Excel o imágenes (máx. 10MB)</div>
+          <div id="selectedFile" class="selected-file" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <label class="field-label">Descripción o Comentarios</label>
+      <textarea id="description" class="description" placeholder="Describe brevemente el contenido de la evidencia..."></textarea>
+
+      <div class="form-actions">
+        <button type="button" id="cancelBtn" class="btn btn-ghost">Cancelar</button>
+        <button type="submit" id="submitBtn" class="btn btn-primary">Enviar Evidencia</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+    const accessToken = localStorage.getItem('access_token');
+    const userMetadataStr = localStorage.getItem('user_metadata');
+    const selectedTaskId = localStorage.getItem('selected_task_id');
+
+    if (!accessToken || !userMetadataStr || !selectedTaskId) {
+        localStorage.clear();
+        window.location.href = "{% url 'select_profile' %}";
+        return;
+    }
+
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const selectedFile = document.getElementById('selectedFile');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const backLink = document.querySelector('.back-link');
+    const form = document.getElementById('evidence-form');
+
+    const goBack = () => {
+        history.back();
+        localStorage.removeItem('selected_task_id');
+    };
+    cancelBtn.addEventListener('click', goBack);
+    backLink.addEventListener('click', goBack);
+
+    uploadArea.addEventListener('click', () => fileInput.click());
+    uploadArea.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            fileInput.click();
+        }
+    });
+
+    fileInput.addEventListener('change', () => {
+        const file = fileInput.files[0];
+        selectedFile.textContent = file ? file.name : '';
+    });
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        alert('Envío deshabilitado (solo demo)');
+    });
+
+    let currentTask = await API_UTILS.get_filter_by_column(
+        "/tasks/", "id", selectedTaskId
+    );
+    currentTask = currentTask.length > 0 ? currentTask[0] : null;
+    const criteria = await API_UTILS.get_filter_by_column(
+        "/criteria/", "id", currentTask.criterion
+    );
+
+    let pageCriteria = document.querySelector('.page-criteria');
+    if (criteria.length > 0) {
+        pageCriteria.textContent = criteria[0].code;
+    }
+    let pageTitle = document.querySelector('.page-title');
+    let pageSub = document.querySelector('.page-sub');
+    if (currentTask) {
+        pageTitle.textContent = currentTask.title;
+        pageSub.textContent = currentTask.description;
+    }
+});
+</script>
+{% endblock %}

@@ -183,6 +183,14 @@
         widgetValues[1].innerText = completedCount;
         widgetValues[2].innerText = pendingCount;
 
+        let criterionOfTask = {};
+        for (const task of userTasks) {
+            const criteria = await API_UTILS.get_filter_by_column(
+                "/criteria/", "id", task.criterion
+            );
+            criterionOfTask[task.id] = criteria;
+        }
+
         const taskListsContainer = document.querySelector('.tasks-list');
         taskListsContainer.innerHTML = '';
         for (const task of userTasks) {
@@ -191,17 +199,27 @@
                 month: 'short',
                 year: 'numeric',
             });
-            const isAccepted =
-                uploadedEvidencesOfTask[task.id].length > 0 &&
-                uploadedEvidencesOfTask[task.id].every(evidence => evidence.is_approved);
-            const statusClass = isAccepted ? 'task-status-accepted' : 'task-status-pending';
-            const statusText = isAccepted ? 'Aceptado' : 'Pendiente';
+            let statusText = 'Pendiente';
+            let statusClass = 'task-status-pending';
+            if (uploadedEvidencesOfTask[task.id].length > 0) {
+                const allApproved = uploadedEvidencesOfTask[task.id].every(evidence => evidence.is_approved);
+                if (allApproved) {
+                    statusText = 'Aceptado';
+                    statusClass = 'task-status-accepted';
+                } else {
+                    statusText = 'En Progreso';
+                    statusClass = 'task-status-in-progress';
+                }                
+            }
+            const criterion = criterionOfTask[task.id].length > 0
+                ? criterionOfTask[task.id][0].code
+                : "Unknown Criterion";
 
             const taskCard = document.createElement('div');
             taskCard.classList.add('task-card');
             taskCard.innerHTML = `
                 <div class="task-card-header">
-                    <div class="task-code">TODO: ISO CODE</div>
+                    <div class="task-code">${criterion}</div>
                     <div class="${statusClass}">${statusText}</div>
                 </div>
                 <div class="task-title">
@@ -210,16 +228,28 @@
                 <div class="task-description">
                     ${task.description}
                 </div>
-                <div class="task-deadline">
-                    <img src="{% static 'frontend/svgs/date.svg'%}" width="16" height="16">
-                    <span>Vence: ${deadline}</span>
+                <div class="task-footer">
+                    <div class="task-deadline">
+                        <img src="{% static 'frontend/svgs/date.svg'%}" width="16" height="16">
+                        <span>Vence: ${deadline}</span>
+                    </div>
+                    <button class="task-upload-btn">
+                        <img src="{% static 'frontend/svgs/upload.svg'%}" width="22" height="22">
+                        <span>Subir evidencia</span>
+                    </button>
                 </div>
             `;
             taskListsContainer.appendChild(taskCard);
         }
 
-        console.log("User Tasks:", userTasks);
-        console.log("Uploaded Evidences:", uploadedEvidencesOfTask);
+        const taskUploadButtons = document.querySelectorAll('.task-upload-btn');
+        taskUploadButtons.forEach((button, index) => {
+            button.addEventListener('click', () => {
+                const task = userTasks[index];
+                localStorage.setItem('selected_task_id', task.id);
+                window.location.href = "{% url 'upload_evidence' %}";
+            });
+        });
     });
 </script>
 
