@@ -79,7 +79,7 @@
                     <div id="widget-end-date-value" class="widget-value">-</div>
                 </article>
                 <article class="widget-card">
-                    <div class="widget-title">Proxima Fase</div>
+                    <div id="widget-next-period-title" class="widget-title">Próxima Fase</div>
                     <div id="widget-next-period-value" class="widget-value">-</div>
                 </article>
             </div>
@@ -175,6 +175,7 @@
                 document.getElementById('widget-start-date-value').innerText = "-";
                 document.getElementById('widget-end-date-value').innerText = "-";
                 document.getElementById('widget-next-period-value').innerText = "-";
+                document.getElementById("widget-next-period-title").innerText = "Próxima Fase"
                 document.getElementById('widget-number-criteria-value').innerText = "-";
                 document.getElementById('widget-completed-tasks-value').innerText = "-";
                 document.getElementById('widget-in-review-tasks-value').innerText = "-";
@@ -184,7 +185,15 @@
             if (!modelId) return;
 
             try {
-                const [modelRes, criteriaRes, tasksRes] = await Promise.all([
+                const [
+                    modelRes, 
+                    criteriaRes, 
+                    tasksRes, 
+                    periodsRes, 
+                    reqEvidencesRes, 
+                    uploadedEvidencesRes,
+                    feedbacksRes
+                ] = await Promise.all([
                     fetch(
                         "{{ api_url }}" + `/certification_models/${modelId}/`, 
                         {
@@ -205,40 +214,155 @@
                             method: 'GET',
                             headers: { 'Authorization': `Bearer ${accessToken}` }
                         }
-                    ) 
+                    ),
+                    fetch(
+                        "{{ api_url }}" + `/periods/?certification_model=${modelId}`, 
+                        {
+                            method: 'GET', 
+                            headers: { 'Authorization': `Bearer ${accessToken}` } 
+                        }
+                    ),
+                    fetch(
+                        "{{ api_url }}" + "/required_evidences/", 
+                        { 
+                            method: 'GET', 
+                            headers: { 'Authorization': `Bearer ${accessToken}` } 
+                        }
+                    ),
+                    fetch(
+                        "{{ api_url }}" + "/uploaded_evidences/", 
+                        { 
+                            method: 'GET', 
+                            headers: { 'Authorization': `Bearer ${accessToken}` } 
+                        }
+                    ),
+                    fetch(
+                        "{{ api_url }}" + "/feedbacks/", 
+                        { 
+                            method: 'GET', 
+                            headers: { 'Authorization': `Bearer ${accessToken}` } 
+                        }
+                    )
                 ]);
 
                 const modelData = await modelRes.json();
                 const criteriaData = await criteriaRes.json();
                 const allTasks = await tasksRes.json();
+                const periodsData = await periodsRes.json();
+                const allReqEvidences = await reqEvidencesRes.json();
+                const allUploadedEvidences = await uploadedEvidencesRes.json();
+                const allFeedbacks = await feedbacksRes.json();
 
                 // Formatear fechas estéticamente (ej: "31 dic 2023")
                 const options = { day: 'numeric', month: 'short', year: 'numeric' };
                 document.getElementById('widget-start-date-value').innerText = new Date(modelData.start_date).toLocaleDateString('es-ES', options).replace('.', '');
                 document.getElementById('widget-end-date-value').innerText = new Date(modelData.end_date).toLocaleDateString('es-ES', options).replace('.', '');
 
-                // Evaluar estado basado en la fecha de fin de forma dinámica
-                /* const today = new Date();
-                const endDate = new Date(modelData.end_date);
-                const statusSpan = document.getElementById('model-status');
-                if (today > endDate) {
-                statusSpan.innerText = "Culminado";
-                statusSpan.className = "status-badge culminado";
-                } else {
-                statusSpan.innerText = "Activo";
-                statusSpan.className = "status-badge activo";
-                } */
+                // Conseguir proxima fase (period) y mostrar la mas cercana
+                // Si hay una activa, mostrar Fase en curso: nombre
+                const today = new Date();
+                today.setHours(0, 0, 0, 0); 
+
+                let displayFase = "Sin fases programadas";
+
+                if (periodsData && periodsData.length > 0) {
+                    const faseEnCurso = periodsData.find(p => {
+                        const start = new Date(p.start_date);
+                        const end = new Date(p.end_date);
+                        return today >= start && today <= end;
+                    });
+
+                    if (faseEnCurso) {
+                        displayFase = faseEnCurso.name;
+                        document.getElementById("widget-next-period-title").innerText = "Fase En Curso"
+                    } 
+                    else {
+                        const fasesFuturas = periodsData.filter(
+                            p => new Date(p.start_date) > today
+                        ).sort(
+                            (a, b) => new Date(a.start_date) - new Date(b.start_date)
+                        );
+
+                        if (fasesFuturas.length > 0) {
+                            displayFase = fasesFuturas[0].name + ": " + fasesFuturas[0].start_date;
+                            document.getElementById("widget-next-period-title").innerText = "Próxima Fase"
+                        }
+                    }
+                }
+                document.getElementById('widget-next-period-value').innerText = displayFase;
+
+                // Inyectamos el texto calculado en tu widget correspondiente
+                document.getElementById('widget-next-period-value').style.fontSize = "18px"; // Ajuste sutil por si el nombre de la fase es largo
+                document.getElementById('widget-next-period-value').innerText = displayFase;
 
                 // Filtrar tareas que pertenezcan a los criterios de ESTE modelo
                 const criteriaIds = criteriaData.map(c => c.id);
                 const modelTasks = allTasks.filter(t => criteriaIds.includes(t.criterion));
 
+                let completedTasks = 0;
+                let reviewTasks = 0;
+
                 // Calcular contadores analíticos
+                modelTasks.forEach(task => {
+                    const reqVersionId = task.requirement_version; 
+
+                    if (!reqVersionId) {
+                    return; 
+                    }
+
+                    const taskReqEvidences = allReqEvidences.filter(re => re.requirement_version === reqVersionId);
+
+                    if (taskReqEvidences.length === 0) {
+                    return; 
+                    }
+
+                    let evidencesStatus = taskReqEvidences.map(reqEv => {
+                        // Encontrar las evidencias subidas para esta evidencia requerida en específico
+                        const uploadedForThisReq = allUploadedEvidences
+                        .filter(ue => ue.required_evidence === reqEv.id)
+                        .sort((a, b) => b.id - a.id); 
+
+                        const mostRecentUpload = uploadedForThisReq[0];
+                        console.log("Most Recent Upload: ", mostRecentUpload)
+
+                        // Si nunca han subido nada, marcamos que no tiene feedback y no está aprobada
+                        if (!mostRecentUpload) {
+                            return { hasUpload: false, hasFeedback: false, isApproved: false };
+                        }
+
+                        // Buscar los feedbacks asociados a la evidencia subida más reciente (ordenados por el más nuevo)
+                        const feedbacksForUpload = allFeedbacks
+                        .filter(f => f.uploaded_evidence === mostRecentUpload.id)
+                        .sort((a, b) => b.id - a.id);
+
+                        const mostRecentFeedback = feedbacksForUpload[0];
+
+                        return {
+                            hasUpload: true,
+                            hasFeedback: !!mostRecentFeedback,
+                            isApproved: mostRecentFeedback ? mostRecentFeedback.result_type === 'APPROVED' : false
+                        };
+                    });
+
+                    // AL MENOS UNA evidencia requerida tiene una subida reciente que NO tiene feedback
+                    const hasAtLeastOneInReview = evidencesStatus.some(status => status.hasUpload && !status.hasFeedback);
+
+                    // TODAS las evidencias requeridas tienen una subida, tienen feedback y el resultado es APPROVED
+                    const areAllApproved = evidencesStatus.every(status => status.hasUpload && status.hasFeedback && status.isApproved);
+
+                    if (areAllApproved) {
+                        completedTasks++;
+                    } 
+                    else if (hasAtLeastOneInReview) {
+                        reviewTasks++;
+                    }
+                });
+
+                // Calcular las pendientes (el resto de las tareas del modelo)
                 const totalTasksCount = modelTasks.length;
-                const completedTasks = 0 // TODO 
-                const reviewTasks = 0 // TODO
                 const pendingTasks = totalTasksCount - completedTasks - reviewTasks;
 
+                // Inyectar los valores en tus widgets
                 document.getElementById('widget-number-criteria-value').innerText = criteriaData.length;
                 document.getElementById('widget-completed-tasks-value').innerText = completedTasks;
                 document.getElementById('widget-in-review-tasks-value').innerText = reviewTasks;
