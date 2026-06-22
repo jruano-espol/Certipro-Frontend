@@ -15,7 +15,7 @@ def login(request):
         'member': 'Miembro de Equipo',
     }
     assert(url_role in mapping)
-    role = mapping.get(url_role, 'Miembro de Equipo')    
+    role = mapping.get(url_role, 'Miembro de Equipo')
 
     context = {
         'role': role,
@@ -26,6 +26,9 @@ def login(request):
 
 def dashboard(request):
     return render(request, "frontend/dashboard.html", {'api_url': api_url})
+
+def dashboard_member(request):
+    return render(request, "frontend/dashboard-member.html", {'api_url': api_url})
 
 def certification_models(request):
     return render(request, "frontend/certification-models.html", {'api_url': api_url})

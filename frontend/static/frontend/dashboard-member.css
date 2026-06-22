@@ -1,0 +1,20 @@
+.widget-icon {
+    font-size: 28px;
+    line-height: 1;
+}
+
+.dashboard-content h1 {
+    margin-bottom: 0;
+}
+
+.dashboard-content p {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.dashboard-widgets .widget-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}

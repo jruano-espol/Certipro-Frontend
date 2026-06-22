@@ -1,0 +1,197 @@
+{% extends "frontend/base.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'frontend/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'frontend/dashboard-member.css' %}">
+
+<div class="dashboard-page">
+    <aside class="dashboard-sidebar">
+        <div class="sidebar-brand">
+            <img src="{% static 'frontend/svgs/certificate.svg'%}" width="32" height="32">
+            <div class="brand-text">
+                <div class="brand-title">CertiPro</div>
+                <div class="brand-subtitle">Gestión de Certificaciones</div>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="#" class="sidebar-link active" onclick="event.preventDefault();">
+                <span>
+                    <img src="{% static 'frontend/svgs/dashboard.svg' %}" width="22" height="22">
+                </span>
+                <span>Panel Principal</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-panel">
+                <div id="sidebar-user-avatar" class="user-avatar"></div>
+                <div class="user-info">
+                    <div id="sidebar-user-name" class="user-name"></div>
+                    <div id="sidebar-user-role" class="user-role"></div>
+                </div>
+            </div>
+            <a href="#" id="log-out" class="sign-out">Cerrar Sesión</a>
+        </div>
+    </aside>
+
+    <main class="dashboard-main">
+        <header class="dashboard-header">
+            <div class="search-box">
+                <span>
+                    <img src="{% static 'frontend/svgs/search.svg' %}" width="22" height="22">
+                </span>
+                <input type="text" placeholder="Buscar criterios, tareas..." />
+            </div>
+            <div class="header-user">
+                <div id="header-user-name" class="header-user-name"></div>
+                <div id="header-user-role" class="header-user-role"></div>
+            </div>
+        </header>
+
+        <section class="dashboard-content">
+            <h1>Mi Panel</h1>
+            <p>Visualiza tus tareas asignadas y sube evidencias.</p>
+
+            <div class="dashboard-widgets widgets-3-cols">
+                <div class="widget-card">
+                    <div>
+                        <div class="widget-title">Tareas Asignadas</div>
+                        <div class="widget-value">-</div>
+                    </div>
+                    <div class="widget-icon">🗂️</div>
+                </div>
+
+                <div class="widget-card">
+                    <div>
+                        <div class="widget-title">Completadas</div>
+                        <div class="widget-value">-</div>
+                    </div>
+                    <div class="widget-icon">✅</div>
+                </div>
+
+                <div class="widget-card">
+                    <div>
+                        <div class="widget-title">Pendientes</div>
+                        <div class="widget-value">-</div>
+                    </div>
+                    <div class="widget-icon">⌛</div>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", async () => {
+        const accessToken = localStorage.getItem('access_token');
+        const userMetadataStr = localStorage.getItem('user_metadata');
+
+        if (!accessToken || !userMetadataStr) {
+            localStorage.clear();
+            window.location.href = "{% url 'select_profile' %}";
+            return;
+        }
+
+        const user = JSON.parse(userMetadataStr);
+
+        // Generar las iniciales del avatar
+        const names = user.username.trim().split(" ");
+        const initials = names.length > 1 
+        ? (names[0][0] + names[names.length - 1][0]).toUpperCase()
+        : names[0][0].toUpperCase();
+
+        document.getElementById('sidebar-user-avatar').innerText = initials;
+        document.getElementById('sidebar-user-name').innerText = user.username;
+        document.getElementById('sidebar-user-role').innerText = user.role;
+
+        document.getElementById('header-user-name').innerText = user.username;
+        document.getElementById('header-user-role').innerText = user.role;
+
+        document.getElementById('log-out').addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.clear();
+            window.location.href = "{% url 'select_profile' %}";
+        });
+
+        async function loadTasks() {
+            try {
+                const response = await fetch("{{api_url}}"+"/tasks/", {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    console.error('Task fetch failed', response.status);
+                    return;
+                }
+
+                const data = await response.json();
+                const tasks = Array.isArray(data) ? data : data.results || [];
+                return tasks;
+            } catch (error) {
+                console.error('Error loading tasks:', error);
+                return [];
+            }
+        }
+
+        let tasks = await loadTasks();
+        console.log('Loaded tasks:', tasks);
+
+        async function loadTaskWidgets() {
+            const totalTasks = tasks.length;
+
+            let completedTasks = 0;
+            let pendingTasks = 0;
+
+            tasks.forEach((task) => {
+                if (typeof task.completed !== "undefined") {
+                    if (task.completed) completedTasks++;
+                    else pendingTasks++;
+                } else if (task.status) {
+                    const status = String(task.status).toLowerCase();
+                    if (status === "completed" || status === "done" || status === "finalized") completedTasks++;
+                    else pendingTasks++;
+                }
+            });
+
+            if (!tasks.some(task => typeof task.completed !== "undefined" || task.status)) {
+                pendingTasks = totalTasks;
+            }
+
+            const widgetValues = document.querySelectorAll('.widget-card .widget-value');
+            if (widgetValues.length >= 3) {
+                widgetValues[0].innerText = totalTasks;
+                widgetValues[1].innerText = completedTasks;
+                widgetValues[2].innerText = pendingTasks;
+            }
+        }
+
+        async function loadUserTasks() {
+            try {
+                const response = await fetch("{{api_url}}"+"/users/", {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    console.error('Task fetch failed', response.status);
+                    return;
+                }
+
+                const data = await response.json();
+                console.log(data);
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
+        loadTaskWidgets();
+        loadUserTasks();
+    });
+</script>
+
+{% endblock %}

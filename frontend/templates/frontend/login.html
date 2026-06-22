@@ -96,8 +96,15 @@
       localStorage.setItem('refresh_token', data.refresh);
       localStorage.setItem('user_metadata', JSON.stringify(data.user))
 
-      window.location.href = "{% url 'dashboard' %}";
-
+      if (selectedRole === "Administrador") {
+        window.location.href = "{% url 'dashboard' %}";
+      } else if (selectedRole === "Miembro de Equipo") {
+        window.location.href = "{% url 'dashboard_member' %}";
+      } else if (selectedRole === "Supervisor") {
+        throw new Error("El rol de supervisor aún no está implementado.");
+      } else {
+        throw new Error(`Rol seleccionado "${selectedRole}" no válido.`);
+      }
     } 
     catch (error) {
       errorDiv.innerText = error.message;
