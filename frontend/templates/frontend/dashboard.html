@@ -298,11 +298,11 @@
                 // Filtrar tareas que pertenezcan a los criterios de ESTE modelo
                 const criteriaIds = criteriaData.map(c => c.id);
                 const modelTasks = allTasks.filter(t => criteriaIds.includes(t.criterion));
-
+                
+                // Calcular contadores analíticos
                 let completedTasks = 0;
                 let reviewTasks = 0;
 
-                // Calcular contadores analíticos
                 modelTasks.forEach(task => {
                     const reqVersionId = task.requirement_version; 
 
