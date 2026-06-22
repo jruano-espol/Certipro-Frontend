@@ -51,8 +51,10 @@
         </header>
 
         <section class="dashboard-content">
-            <h1>Mi Panel</h1>
-            <p>Visualiza tus tareas asignadas y sube evidencias.</p>
+            <div class="my-panel-header">
+                <h1>Mi Panel</h1>
+                <p>Visualiza tus tareas asignadas y sube evidencias.</p>
+            </div>
 
             <div class="dashboard-widgets widgets-3-cols">
                 <div class="widget-card">
@@ -60,7 +62,9 @@
                         <div class="widget-title">Tareas Asignadas</div>
                         <div class="widget-value">-</div>
                     </div>
-                    <div class="widget-icon">🗂️</div>
+                    <div class="widget-icon">
+                        <img src="{% static 'frontend/svgs/task.svg'%}" width="48" height="48">
+                    </div>
                 </div>
 
                 <div class="widget-card">
@@ -68,7 +72,9 @@
                         <div class="widget-title">Completadas</div>
                         <div class="widget-value">-</div>
                     </div>
-                    <div class="widget-icon">✅</div>
+                    <div class="widget-icon">
+                        <img src="{% static 'frontend/svgs/done.svg'%}" width="48" height="48">
+                    </div>
                 </div>
 
                 <div class="widget-card">
@@ -76,7 +82,22 @@
                         <div class="widget-title">Pendientes</div>
                         <div class="widget-value">-</div>
                     </div>
-                    <div class="widget-icon">⌛</div>
+                    <div class="widget-icon">
+                        <img src="{% static 'frontend/svgs/pending.svg'%}" width="48" height="48">
+                    </div>
+                </div>
+            </div>
+
+            <div class="my-tasks">
+                <div class="tasks-header">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <img src="{% static 'frontend/svgs/task.svg'%}" width="32" height="32">
+                        <h2>Mis Tareas</h2>
+                    </div>
+                </div>
+                
+                <div class="tasks-list">
+                    <!-- Las tareas se cargarán aquí mediante JavaScript -->
                 </div>
             </div>
         </section>
@@ -161,6 +182,44 @@
         }
         widgetValues[1].innerText = completedCount;
         widgetValues[2].innerText = pendingCount;
+
+        const taskListsContainer = document.querySelector('.tasks-list');
+        taskListsContainer.innerHTML = '';
+        for (const task of userTasks) {
+            const deadline = new Date(task.end_date).toLocaleDateString('es-ES', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+            });
+            const isAccepted =
+                uploadedEvidencesOfTask[task.id].length > 0 &&
+                uploadedEvidencesOfTask[task.id].every(evidence => evidence.is_approved);
+            const statusClass = isAccepted ? 'task-status-accepted' : 'task-status-pending';
+            const statusText = isAccepted ? 'Aceptado' : 'Pendiente';
+
+            const taskCard = document.createElement('div');
+            taskCard.classList.add('task-card');
+            taskCard.innerHTML = `
+                <div class="task-card-header">
+                    <div class="task-code">TODO: ISO CODE</div>
+                    <div class="${statusClass}">${statusText}</div>
+                </div>
+                <div class="task-title">
+                    ${task.title}
+                </div>
+                <div class="task-description">
+                    ${task.description}
+                </div>
+                <div class="task-deadline">
+                    <img src="{% static 'frontend/svgs/date.svg'%}" width="16" height="16">
+                    <span>Vence: ${deadline}</span>
+                </div>
+            `;
+            taskListsContainer.appendChild(taskCard);
+        }
+
+        console.log("User Tasks:", userTasks);
+        console.log("Uploaded Evidences:", uploadedEvidencesOfTask);
     });
 </script>
 
