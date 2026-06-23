@@ -1,0 +1,158 @@
+{% extends "frontend/base.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'frontend/style.css' %}">
+<link rel="stylesheet" href="{% static 'frontend/model-view.css' %}">
+
+<div class="model-view-wrapper">
+    <a id="back-button" aria-label="Volver">
+        <!-- left arrow icon -->
+        <svg viewBox="0 0 20 20" fill="none" width="18" height="18" aria-hidden="true">
+            <path d="M11 15L6 10l5-5" stroke="#3b4854" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Volver a modelos
+    </a>
+
+    <div class="page-shell">
+        <div id="criteria-tree-header">
+            <div id="criteria-tree-title">
+                <img src="{% static 'frontend/svgs/task.svg' %}" width="24" height="24">
+                <h2>Árbol de Criterios</h2>
+            </div>
+            <button id="add-criterion-btn">
+                <img src="{% static 'frontend/svgs/plus.svg'%}" width="22" height="22">
+                Agregar Criterio
+            </button>
+        </div>
+        <div id="criteria-container" class="criteria-tree">
+            <!-- Criteria will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const accessToken = localStorage.getItem('access_token');
+        const userMetadataStr = localStorage.getItem('user_metadata');
+
+        if (!accessToken || !userMetadataStr) {
+            localStorage.clear();
+            window.location.href = "{% url 'select_profile' %}";
+            return;
+        }
+
+        const backButton = document.getElementById('back-button');
+        backButton.addEventListener('click', () => {
+            localStorage.removeItem('selected_model_id');
+            history.back();
+        });
+
+        // Load criteria for the model
+        loadModelCriteria();
+    });
+
+    async function loadModelCriteria() {
+        const modelId = localStorage.getItem('selected_model_id');
+        if (!modelId) {
+            console.error('No model ID found');
+            return;
+        }
+
+        try {
+            // Get all criteria for this model
+            const criteria = await API_UTILS.get_filter_by_column(
+                "/criteria/",
+                "certification_model_id",
+                modelId
+            );
+
+            // Organize criteria into tree structure
+            const rootCriteria = criteria.filter(c => c.parent === null);
+            
+            // Build and render the tree
+            const container = document.getElementById('criteria-container');
+            container.innerHTML = '';
+
+            for (const criterion of rootCriteria) {
+                const element = await buildCriterionElement(criterion, criteria);
+                container.appendChild(element);
+            }
+        } catch (error) {
+            console.error('Error loading criteria:', error);
+        }
+    }
+
+    async function buildCriterionElement(criterion, allCriteria) {
+        const div = document.createElement('div');
+        div.className = 'criterion-item';
+        
+        const criteriaTasks = await API_UTILS.get_filter_by_column(
+            "/tasks/",
+            "criterion",
+            criterion.id
+        );
+
+        // Check if this criterion has subcriteria
+        const subCriteria = allCriteria.filter(c => c.parent === criterion.id);
+        const hasChildren = subCriteria.length > 0;
+
+        let html = '<div class="criterion-header">';
+
+        if (hasChildren) {
+            html += `
+                <button class="collapse-btn" aria-expanded="true" aria-label="Expandir/contraer">
+                    ▼
+                </button>
+            `;
+        } else {
+            html += '<div class="collapse-btn-placeholder"></div>';
+        }
+
+        html += `
+            <span class="criterion-name">${criterion.title || 'Sin nombre'}</span>
+            <div class="criterion-actions">
+                <span class="task-count">${criteriaTasks.length} tareas</span>
+                <button class="action-btn edit-btn">
+                    <img src="{% static 'frontend/svgs/edit.svg' %}" width="16" height="16">
+                </button>
+                <button class="action-btn delete-btn">
+                    <img src="{% static 'frontend/svgs/trash.svg' %}" width="16" height="16">
+                </button>
+                <button class="action-btn add-subcriteria-btn">
+                    <img src="{% static 'frontend/svgs/plus.svg' %}" width="16" height="16">
+                </button>
+            </div>
+        </div>
+        `;
+
+        if (hasChildren) {
+            html += '<div class="subcriteria-container" style="display: block;"></div>';
+        }
+
+        div.innerHTML = html;
+
+        // Add collapse functionality
+        if (hasChildren) {
+            const collapseBtn = div.querySelector('.collapse-btn');
+            const subcriteriaContainer = div.querySelector('.subcriteria-container');
+
+            collapseBtn.addEventListener('click', () => {
+                const isExpanded = collapseBtn.getAttribute('aria-expanded') === 'true';
+                collapseBtn.setAttribute('aria-expanded', !isExpanded);
+                subcriteriaContainer.style.display = isExpanded ? 'none' : 'block';
+                collapseBtn.textContent = isExpanded ? '▶' : '▼';
+            });
+
+            // Populate subcriteria
+            for (const sub of subCriteria) {
+                const subElement = await buildCriterionElement(sub, allCriteria);
+                subElement.classList.add('subcriteria-item');
+                subcriteriaContainer.appendChild(subElement);
+            }
+        }
+
+        return div;
+    }
+</script>
+{% endblock %}

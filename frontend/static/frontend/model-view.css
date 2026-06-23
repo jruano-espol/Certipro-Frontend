@@ -1,0 +1,214 @@
+main {
+    margin: 0 12px; /* reduce horizontal margins so content can occupy more width */
+    padding: 0;
+    box-sizing: border-box;
+    max-width: 100%;
+}
+
+.model-view-wrapper {
+    /* increased max width and wider horizontal padding so content occupies more screen */
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 12px 32px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#back-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 20px 0 20px 8px; /* top right bottom left */
+    color: var(--accent);
+    text-decoration: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: opacity 0.2s;
+}
+
+#criteria-tree-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#criteria-tree-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+#add-criterion-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 14px;
+    transition: opacity 0.2s;
+    font-family: inherit;
+}
+
+#back-button:hover {
+    opacity: 0.8;
+}
+
+#back-button svg {
+    flex-shrink: 0;
+}
+
+.criteria-tree {
+    padding: 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+}
+
+.criterion-item {
+    margin-bottom: 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background-color: var(--bg);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.criterion-header {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    gap: 12px;
+    box-sizing: border-box;
+}
+
+.collapse-btn {
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text);
+    min-width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+}
+
+.collapse-btn-placeholder {
+    min-width: 24px;
+    height: 24px;
+}
+
+.criterion-name {
+    font-weight: 500;
+    color: var(--text);
+    flex: 1;
+    font-size: 14px;
+    min-width: 0; /* allow truncation instead of overflowing */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.criterion-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.task-count {
+    font-size: 12px;
+    color: var(--muted);
+    min-width: 70px;
+    text-align: right;
+}
+
+.action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px 8px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.action-btn:hover {
+    opacity: 1;
+}
+
+.add-subcriteria-btn {
+    filter: invert(100%);
+}
+
+.subcriteria-container {
+    padding-left: 32px;
+    padding-right: 16px;
+    padding-bottom: 12px;
+}
+
+.subcriteria-item {
+    margin-bottom: 8px;
+}
+
+.subcriteria-item .criterion-header {
+    padding: 12px 16px;
+    background-color: #fafbfc;
+}
+
+/* ensure the main/page shell keeps content centered and constrained */
+.page-shell {
+    max-width: 1100px;
+    margin: 0 auto;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 8px 0;
+}
+
+/* prevent horizontal overflow from long names/buttons */
+.criteria-tree {
+    padding: 0;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+}
+
+/* make items respect container width */
+.criterion-item {
+    margin-bottom: 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background-color: var(--bg);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* allow flex children to shrink to avoid overflow */
+.criterion-header {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    gap: 12px;
+    box-sizing: border-box;
+}
+
+.criterion-name {
+    font-weight: 500;
+    color: var(--text);
+    flex: 1;
+    font-size: 14px;
+    min-width: 0; /* allow truncation instead of overflowing */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
