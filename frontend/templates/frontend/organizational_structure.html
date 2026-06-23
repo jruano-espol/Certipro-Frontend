@@ -1,0 +1,239 @@
+{% extends "frontend/base.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'frontend/dashboard.css' %}">
+
+<div class="dashboard-page">
+    <aside class="dashboard-sidebar">
+        <div class="sidebar-brand">
+            <img src="{% static 'frontend/svgs/certificate.svg'%}" width="32" height="32">
+            <div class="brand-text">
+                <div class="brand-title">CertiPro</div>
+                <div class="brand-subtitle">Gestión de Certificaciones</div>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="{% url 'dashboard' %}" class="sidebar-link">
+                <span>
+                    <img src="{% static 'frontend/svgs/dashboard.svg' %}" width="22" height="22">
+                </span>
+                <span>Panel Principal</span>
+            </a>
+            <a href="{% url 'certification_models' %}" class="sidebar-link">
+                <span>
+                    <img src="{% static 'frontend/svgs/medal-star.svg' %}" width="22" height="22">
+                </span>
+                <span>Modelos de Certificación</span>
+            </a>
+            <a href="#" class="sidebar-link active" onclick="event.preventDefault();">
+                <span>
+                    <img src="{% static 'frontend/svgs/group.svg' %}" width="22" height="22">
+                </span>
+                <span>Estructura Organizacional</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-panel">
+                <div id="sidebar-user-avatar" class="user-avatar"></div>
+                <div class="user-info">
+                    <div id="sidebar-user-name" class="user-name"></div>
+                    <div id="sidebar-user-role" class="user-role"></div>
+                </div>
+            </div>
+            <a href="#" id="log-out" class="sign-out">Cerrar Sesión</a>
+        </div>
+    </aside>
+
+    <div class="dashboard-main">
+        <header class="dashboard-header">
+            <div class="search-box">
+                <span>
+                    <img src="{% static 'frontend/svgs/search.svg' %}" width="22" height="22">
+                </span>
+                <input type="text" placeholder="Buscar criterios, tareas..." />
+            </div>
+            <div class="header-user">
+                <div id="header-user-name" class="header-user-name"></div>
+                <div id="header-user-role" class="header-user-role"></div>
+            </div>
+        </header>
+
+        <section class="dashboard-content">
+            <div class="dashboard-card">
+                <div>
+                    <h1>Estructura Organizacional</h1>
+                    <p>Administra sucursales, departamentos y grupos de trabajo</p>
+                </div>
+            </div>
+
+            <div class="organization-layout">
+                <aside class="organization-sidebar">
+                    <div class="organization-panel-header">
+                        <h2>Sucursales</h2>
+                        <p>Haz clic en una sucursal para ver sus departamentos y grupos de trabajo.</p>
+                    </div>
+                    <div id="branches-list" class="branches-list">
+                        <div class="empty-state">Cargando sucursales...</div>
+                    </div>
+                </aside>
+
+                <section class="organization-details">
+                    <div class="organization-panel-header">
+                        <h2>Detalle de la sucursal</h2>
+                    </div>
+                    <div id="branch-details" class="branch-details">
+                        <div class="empty-state">Seleccione una sucursal para ver departamentos y grupos de trabajo.</div>
+                    </div>
+                </section>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+        const accessToken = localStorage.getItem('access_token');
+        const userMetadataStr = localStorage.getItem('user_metadata');
+
+        if (!accessToken || !userMetadataStr) {
+            localStorage.clear();
+            window.location.href = "{% url 'select_profile' %}";
+            return;
+        }
+
+        const user = JSON.parse(userMetadataStr);
+
+        // Generar las iniciales del avatar
+        const names = user.username.trim().split(" ");
+        const initials = names.length > 1 
+        ? (names[0][0] + names[names.length - 1][0]).toUpperCase()
+        : names[0][0].toUpperCase();
+
+        document.getElementById('sidebar-user-avatar').innerText = initials;
+        document.getElementById('sidebar-user-name').innerText = user.username;
+        document.getElementById('sidebar-user-role').innerText = user.role;
+
+        document.getElementById('header-user-name').innerText = user.username;
+        document.getElementById('header-user-role').innerText = user.role;
+
+        document.getElementById('log-out').addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.clear();
+            window.location.href = "{% url 'select_profile' %}";
+        });
+
+        const branchesList = document.getElementById('branches-list');
+        const branchDetails = document.getElementById('branch-details');
+
+        const allBranches = await API_UTILS.get("/branches/");
+        branchesList.innerHTML = '';
+
+        if (!allBranches) {
+            branchesList.innerHTML = '<div class="empty-state">No se encontraron sucursales.</div>';
+            return;
+        }
+
+        for (const branch of allBranches) {
+            const branchSupervisor = await API_UTILS.get_filter_by_column(
+                "/users/", "id", branch.supervisor
+            );
+            const branchDepartments = await API_UTILS.get_filter_by_column(
+                "/departments/", "branch", branch.id
+            );
+            const departmentsCount = branchDepartments.length;
+
+            const branchCard = document.createElement('button');
+            branchCard.type = 'button';
+            branchCard.className = 'branch-card';
+            branchCard.innerHTML = `
+                <div class="branch-card-title">${branch.name}</div>
+                <div class="branch-card-meta">
+                    <span>${branch.location}</span>
+                    <span>${departmentsCount} departamento${departmentsCount === 1 ? '' : 's'}</span>
+                    <span>${branchSupervisor.name}</span>
+                </div>
+            `;
+
+            branchCard.addEventListener('click', async () => {
+                const activeCard = branchesList.querySelector('.branch-card.active');
+                if (activeCard) activeCard.classList.remove('active');
+                branchCard.classList.add('active');
+                await showBranchDetails(branch);
+            });
+
+            branchesList.appendChild(branchCard);
+        }
+
+        async function showBranchDetails(branch) {
+            branchDetails.innerHTML = '<div class="empty-state">Cargando estructura...</div>';
+            const branchDepartments = await API_UTILS.get_filter_by_column(
+                "/departments/", "branch", branch.id
+            );
+
+            if (!branchDepartments) {
+                branchDetails.innerHTML = '<div class="empty-state">Esta sucursal no tiene departamentos asignados.</div>';
+                return;
+            }
+
+            for (const department of branchDepartments) {
+                const departmentSupervisor = await API_UTILS.get_filter_by_column(
+                    "/users/", "id", department.supervisor
+                );
+
+                const departmentWorkGroups = await API_UTILS.get_filter_by_column(
+                    "/work_groups/", "department", department.id
+                );
+
+                const departmentCard = document.createElement('div');
+                departmentCard.className = 'department-card';
+                departmentCard.innerHTML = `
+                    <div class="department-header">
+                        <div>
+                            <div class="department-title">${department.name}</div>
+                            <div class="department-meta">${departmentWorkGroups.length} grupo${departmentWorkGroups.length === 1 ? '' : 's'}</div>
+                        </div>
+                        <div class="department-supervisor">Supervisor: ${departmentSupervisor.full_name}</div>
+                    </div>
+                `;
+
+                const workgroupsContainer = document.createElement('div');
+                workgroupsContainer.className = 'workgroups-list';
+
+                if (!departmentWorkGroups) {
+                    workgroupsContainer.innerHTML = '<div class="empty-state">No se encontraron grupos de trabajo.</div>';
+                } 
+                else {
+                    for (const workGroup of departmentWorkGroups) {
+                        const workGroupSupervisor = await API_UTILS.get_filter_by_column(
+                            "/users/", "id", workGroup.supervisor
+                        );
+
+                        const workGroupMembers = await API_UTILS.get_filter_by_column(
+                            "/work_group_members/", "work_group", workGroup.id
+                        );
+
+                        const workgroupCard = document.createElement('div');
+                        workgroupCard.className = 'workgroup-card';
+                        workgroupCard.innerHTML = `
+                            <div class="workgroup-name">${workGroup.name}</div>
+                            <div class="workgroup-meta">
+                                <span>${workGroupMembers.length} miembro${workGroupMembers.length === 1 ? '' : 's'}</span>
+                                <span>Supervisor: ${workGroupSupervisor.full_name}</span>
+                            </div>
+                        `;
+                        workgroupsContainer.appendChild(workgroupCard);
+                    }
+                }
+
+                departmentCard.appendChild(workgroupsContainer);
+                branchDetails.appendChild(departmentCard);
+            }
+        }
+
+    });
+    </script>
+
+</div>    
+{% endblock %}

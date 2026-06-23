@@ -28,6 +28,12 @@
                 </span>
                 <span>Modelos de Certificación</span>
             </a>
+            <a href="{% url 'organizational_structure' %}" class="sidebar-link">
+                <span>
+                    <img src="{% static 'frontend/svgs/group.svg' %}" width="22" height="22">
+                </span>
+                <span>Estructura Organizacional</span>
+            </a>
         </nav>
 
         <div class="sidebar-footer">
@@ -172,12 +178,9 @@
         grid.innerHTML = '<div class="models-empty">Cargando modelos...</div>';
 
         try {
-            const res = await fetch(`${API_URL}/certification_models/`, {
-                headers: { 'Authorization': `Bearer ${accessToken}` }
-            });
+            const data = await API_UTILS.get("/certification_models/")
 
-            if (!res.ok) throw new Error(`Error ${res.status}`);
-            const data = await res.json();
+            if (!data) throw new Error(`Error ${data.status}`);
 
             // La API puede devolver lista directa o { results: [...] } si usa paginación
             const models = Array.isArray(data) ? data : (data.results ?? []);

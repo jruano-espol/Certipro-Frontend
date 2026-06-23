@@ -27,6 +27,12 @@
                 </span>
                 <span>Modelos de Certificación</span>
             </a>
+            <a href="{% url 'organizational_structure' %}" class="sidebar-link">
+                <span>
+                    <img src="{% static 'frontend/svgs/group.svg' %}" width="22" height="22">
+                </span>
+                <span>Estructura Organizacional</span>
+            </a>
         </nav>
 
         <div class="sidebar-footer">
@@ -59,7 +65,7 @@
             <div class="dashboard-card">
                 <div>
                     <h1>Panel Principal</h1>
-                    <p>Resumen general de las certificaciones y la actividad reciente.</p>
+                    <p>Resumen general de las certificaciones y la actividad reciente</p>
                 </div>
                 <div>
                     <h1>Seleccione un Modelo</h1>
@@ -140,14 +146,9 @@
         const models_select = document.getElementById('models-select');
 
         try {
-            const response = await fetch("{{ api_url }}" + "/certification_models/", {
-                method: 'GET',
-                headers: { 'Authorization': `Bearer ${accessToken}` }
-            });
-            if (!response.ok) throw new Error();
+            const models = await API_UTILS.get("/certification_models/")
+            if (!models) throw new Error();
             
-            const models = await response.json();
-
             if (models.length === 0) {
                 models_select.innerHTML = '<option value="">No se encontraron modelos</option>';
                 return;

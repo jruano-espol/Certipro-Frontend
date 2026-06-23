@@ -11,5 +11,6 @@ urlpatterns = [
     path("upload_evidence/", views.upload_evidence, name="upload_evidence"),
     path("new_certification_model/", views.new_certification_model, name="new_certification_model"),
     path("tareas/", views.tareas, name="tareas"),
-    path("principal_miembro/", views.principal_miembro, name="principal_miembro")
+    path("principal_miembro/", views.principal_miembro, name="principal_miembro"),
+    path("organizational_structure/", views.organizational_structure, name="organizational_structure")
 ]
