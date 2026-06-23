@@ -10,6 +10,7 @@ urlpatterns = [
     path("certification_models/", views.certification_models, name="certification_models"),
     path("upload_evidence/", views.upload_evidence, name="upload_evidence"),
     path("new_certification_model/", views.new_certification_model, name="new_certification_model"),
+    path("model_view/", views.model_view, name="model_view"),
     path("tareas/", views.tareas, name="tareas"),
     path("principal_miembro/", views.principal_miembro, name="principal_miembro"),
     path("organizational_structure/", views.organizational_structure, name="organizational_structure")
