@@ -12,5 +12,6 @@ urlpatterns = [
     path("new_certification_model/", views.new_certification_model, name="new_certification_model"),
     path("model_view/", views.model_view, name="model_view"),
     path("tareas/", views.tareas, name="tareas"),
-    path("principal_miembro/", views.principal_miembro, name="principal_miembro")
+    path("principal_miembro/", views.principal_miembro, name="principal_miembro"),
+    path("organizational_structure/", views.organizational_structure, name="organizational_structure")
 ]

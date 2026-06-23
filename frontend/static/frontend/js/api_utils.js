@@ -17,7 +17,7 @@ const API_UTILS={
             // Si hay error de autenticación (Token expirado), redirigir al login
             if (response.status === 401) {
                 localStorage.clear();
-                window.location.href = "/select-profile/"; // Ajusta a tu URL de Django
+                window.location.href = "/select_profile/";
                 return null;
             }
 

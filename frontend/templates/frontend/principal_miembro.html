@@ -232,7 +232,7 @@ async function cargarPanel() {
         renderTareas(tareas);
 
         // Evidencias rechazadas
-        const evidencias = await apiFetch('/uploaded_evidences/');
+        const evidencias = await apiFetchFetch('/uploaded_evidences/');
         const rechazadas = [];
         for (const ev of evidencias) {
             const feedbacks = await apiFetch(`/feedbacks/?uploaded_evidence=${ev.id}`);

@@ -47,3 +47,6 @@ def tareas(request):
 
 def principal_miembro(request):
     return render(request, "frontend/principal_miembro.html", {'api_url': api_url})
+
+def organizational_structure(request):
+    return render(request, "frontend/organizational_structure.html", {})
