@@ -33,5 +33,22 @@ const API_UTILS={
     },
     async get_filter_by_column(endpoint, column, id){
         return await this.get(`${endpoint}?${column}=${id}`)
+    },
+    async post(endpoint, data) {
+        try {
+            const response = await fetch(`${this.baseUrl}${endpoint}`, {
+                method: 'POST',
+                headers: {
+                    ...this.get_headers(),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return await response.json();
+        } catch (error) {
+            console.error(`Error en POST ${endpoint}:`, error);
+            throw error;
+        }
     }
 };

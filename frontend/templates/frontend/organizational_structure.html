@@ -72,7 +72,10 @@
             <div class="organization-layout">
                 <aside class="organization-sidebar">
                     <div class="organization-panel-header">
-                        <h2>Sucursales</h2>
+                        <div class="panel-heading">
+                            <h2>Sucursales</h2>
+                            <button type="button" id="add-branch-button" class="panel-action-button" aria-label="Agregar sucursal">+</button>
+                        </div>
                         <p>Haz clic en una sucursal para ver sus departamentos y grupos de trabajo.</p>
                     </div>
                     <div id="branches-list" class="branches-list">
@@ -82,7 +85,10 @@
 
                 <section class="organization-details">
                     <div class="organization-panel-header">
-                        <h2>Detalle de la sucursal</h2>
+                        <div class="panel-heading">
+                            <h2>Detalle de la sucursal</h2>
+                            <button type="button" id="add-department-button" class="panel-action-button" aria-label="Agregar departamento" disabled>+</button>
+                        </div>
                     </div>
                     <div id="branch-details" class="branch-details">
                         <div class="empty-state">Seleccione una sucursal para ver departamentos y grupos de trabajo.</div>
@@ -91,6 +97,22 @@
             </div>
         </section>
     </div>
+
+<div id="modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 id="modal-title">Título del formulario</h3>
+            <button type="button" id="modal-close-button" class="modal-close-button" aria-label="Cerrar">×</button>
+        </div>
+        <p id="modal-description" class="modal-description">Contenido del formulario pendiente de implementación.</p>
+        <form id="modal-form" class="modal-form">
+            <div id="modal-fields" class="modal-fields"></div>
+            <div class="modal-actions">
+                <button type="submit" id="modal-submit-button" class="modal-submit-button">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
 
     <script>
         document.addEventListener("DOMContentLoaded", async () => {
@@ -126,65 +148,267 @@
 
         const branchesList = document.getElementById('branches-list');
         const branchDetails = document.getElementById('branch-details');
+        const addBranchButton = document.getElementById('add-branch-button');
+        const addDepartmentButton = document.getElementById('add-department-button');
+        const modalOverlay = document.getElementById('modal-overlay');
+        const modalTitle = document.getElementById('modal-title');
+        const modalDescription = document.getElementById('modal-description');
+        const modalForm = document.getElementById('modal-form');
+        const modalFields = document.getElementById('modal-fields');
+        const modalSubmitButton = document.getElementById('modal-submit-button');
+        const modalCloseButton = document.getElementById('modal-close-button');
+        let selectedBranch = null;
+        let users = [];
+        let modalMode = null;
+        let modalContext = null;
 
-        const allBranches = await API_UTILS.get("/branches/");
-        branchesList.innerHTML = '';
+        addBranchButton.addEventListener('click', () => {
+            openModal('Crear nueva sucursal', 'Rellena los datos para crear una nueva sucursal.', 'branch');
+        });
 
-        if (!allBranches) {
-            branchesList.innerHTML = '<div class="empty-state">No se encontraron sucursales.</div>';
-            return;
+        addDepartmentButton.addEventListener('click', () => {
+            if (!selectedBranch) return;
+            openModal(
+                'Crear nuevo departamento',
+                `Rellena los datos para crear un departamento en la sucursal ${selectedBranch.name}.`,
+                'department',
+                { branchId: selectedBranch.id }
+            );
+        });
+
+        users = await API_UTILS.get('/users/') || [];
+        await loadBranches();
+
+        modalCloseButton.addEventListener('click', closeModal);
+        modalOverlay.addEventListener('click', (event) => {
+            if (event.target === event.currentTarget) {
+                closeModal();
+            }
+        });
+
+        modalForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            await submitModalForm();
+        });
+
+        function openModal(title, description, mode, context = {}) {
+            modalMode = mode;
+            modalContext = context;
+            modalTitle.innerText = title;
+            modalDescription.innerText = description;
+            modalFields.innerHTML = renderFormFields(mode, context);
+            modalSubmitButton.innerText = mode === 'branch' ? 'Crear sucursal' : mode === 'department' ? 'Crear departamento' : 'Crear grupo de trabajo';
+            modalOverlay.classList.remove('hidden');
         }
 
-        for (const branch of allBranches) {
-            const branchSupervisor = await API_UTILS.get_filter_by_column(
-                "/users/", "id", branch.supervisor
-            );
-            const branchDepartments = await API_UTILS.get_filter_by_column(
-                "/departments/", "branch", branch.id
-            );
-            const departmentsCount = branchDepartments.length;
+        function closeModal() {
+            modalOverlay.classList.add('hidden');
+            modalMode = null;
+            modalContext = null;
+            modalFields.innerHTML = '';
+            modalForm.reset();
+        }
 
-            const branchCard = document.createElement('button');
-            branchCard.type = 'button';
-            branchCard.className = 'branch-card';
-            branchCard.innerHTML = `
-                <div class="branch-card-title">${branch.name}</div>
-                <div class="branch-card-meta">
-                    <span>${branch.location}</span>
-                    <span>${departmentsCount} departamento${departmentsCount === 1 ? '' : 's'}</span>
-                    <span>${branchSupervisor.name}</span>
-                </div>
+        function renderFormFields(mode, context) {
+            const userOptions = users.map(user => `
+                <option value="${user.id}">${user.first_name} ${user.last_name} (${user.username})</option>
+            `).join('');
+
+            const supervisorField = `
+                <label class="modal-field">
+                    <span>Supervisor</span>
+                    <select name="supervisor" required>
+                        <option value="" disabled selected>Selecciona un supervisor</option>
+                        ${userOptions}
+                    </select>
+                </label>
             `;
 
-            branchCard.addEventListener('click', async () => {
-                const activeCard = branchesList.querySelector('.branch-card.active');
-                if (activeCard) activeCard.classList.remove('active');
-                branchCard.classList.add('active');
-                await showBranchDetails(branch);
+            if (mode === 'branch') {
+                return `
+                    <label class="modal-field">
+                        <span>Nombre de la sucursal</span>
+                        <input type="text" name="name" placeholder="Sucursal Norte Centro" required />
+                    </label>
+                    <label class="modal-field">
+                        <span>Ubicación</span>
+                        <input type="text" name="location" placeholder="Av. Juan Tanca Marengo, Guayaquil" required />
+                    </label>
+                    ${supervisorField}
+                `;
+            }
+
+            if (mode === 'department') {
+                return `
+                    <label class="modal-field">
+                        <span>Nombre del departamento</span>
+                        <input type="text" name="name" placeholder="Departamento de Ingeniería y Desarrollo" required />
+                    </label>
+                    <label class="modal-field">
+                        <span>Supervisor</span>
+                        <select name="supervisor" required>
+                            <option value="" disabled selected>Selecciona un supervisor</option>
+                            ${userOptions}
+                        </select>
+                    </label>
+                    <input type="hidden" name="branch" value="${context.branchId}" />
+                `;
+            }
+
+            if (mode === 'workgroup') {
+                const memberOptions = users.map(user => `
+                    <option value="${user.id}">${user.first_name} ${user.last_name} (${user.username})</option>
+                `).join('');
+
+                return `
+                    <label class="modal-field">
+                        <span>Nombre del grupo de trabajo</span>
+                        <input type="text" name="name" placeholder="Equipo de Aseguramiento de la Calidad (QA)" required />
+                    </label>
+                    <label class="modal-field">
+                        <span>Supervisor</span>
+                        <select name="supervisor" required>
+                            <option value="" disabled selected>Selecciona un supervisor</option>
+                            ${userOptions}
+                        </select>
+                    </label>
+                    <label class="modal-field">
+                        <span>Miembros</span>
+                        <select name="members" multiple>
+                            ${memberOptions}
+                        </select>
+                        <small>Selecciona cero o más usuarios</small>
+                    </label>
+                    <input type="hidden" name="department" value="${context.departmentId}" />
+                `;
+            }
+
+            return '';
+        }
+
+        async function submitModalForm() {
+            if (!modalMode) return;
+            const currentMode = modalMode;
+
+            const formData = new FormData(modalForm);
+            const body = {};
+            formData.forEach((value, key) => {
+                if (key === 'members') {
+                    if (!body.members) body.members = [];
+                    body.members.push(parseInt(value, 10));
+                    return;
+                }
+                if (key === 'supervisor' || key === 'branch' || key === 'department') {
+                    body[key] = parseInt(value, 10);
+                    return;
+                }
+                body[key] = value;
             });
 
-            branchesList.appendChild(branchCard);
+            try {
+                modalSubmitButton.disabled = true;
+                modalSubmitButton.innerText = 'Guardando...';
+
+                if (modalMode === 'branch') {
+                    await API_UTILS.post('/branches/', body);
+                    await loadBranches();
+                } else if (modalMode === 'department') {
+                    await API_UTILS.post('/departments/', body);
+                    if (selectedBranch) {
+                        await showBranchDetails(selectedBranch);
+                    }
+                } else if (modalMode === 'workgroup') {
+                    await API_UTILS.post('/work_groups/', body);
+                    if (selectedBranch) {
+                        await showBranchDetails(selectedBranch);
+                    }
+                }
+
+                closeModal();
+            } catch (error) {
+                console.error('Error al enviar el formulario:', error);
+                alert('Ocurrió un error al crear el elemento. Revisa la consola.');
+            } finally {
+                modalSubmitButton.disabled = false;
+                modalSubmitButton.innerText = currentMode === 'branch' ? 'Crear sucursal' : currentMode === 'department' ? 'Crear departamento' : 'Crear grupo de trabajo';
+            }
+        }
+
+        async function loadBranches() {
+            const allBranches = await API_UTILS.get('/branches/') || [];
+            branchesList.innerHTML = '';
+            if (allBranches.length === 0) {
+                branchesList.innerHTML = '<div class="empty-state">No se encontraron sucursales.</div>';
+                return;
+            }
+
+            for (const branch of allBranches) {
+                const branchSupervisor = await API_UTILS.get_filter_by_column(
+                    '/users/', 'id', branch.supervisor
+                );
+                const branchDepartments = await API_UTILS.get_filter_by_column(
+                    '/departments/', 'branch', branch.id
+                );
+                const departmentsCount = branchDepartments.length;
+
+                const branchCard = document.createElement('button');
+                branchCard.type = 'button';
+                branchCard.className = 'branch-card';
+                branchCard.innerHTML = `
+                    <div class="branch-card-title">${branch.name}</div>
+                    <div class="branch-card-meta">
+                                <span>${branch.location}</span>
+                        <span>${departmentsCount} departamento${departmentsCount === 1 ? '' : 's'}</span>
+                        <span>${branchSupervisor[0] ? branchSupervisor[0].first_name + ' ' + branchSupervisor[0].last_name : 'N/A'}</span>
+                    </div>
+                `;
+                branchCard.addEventListener('click', async () => {
+                    const allCards = branchesList.querySelectorAll('.branch-card');
+                    allCards.forEach(card => {
+                        card.disabled = true;
+                        card.style.opacity = '0.6';
+                        card.style.cursor = 'not-allowed';
+                    });
+
+                    const activeCard = branchesList.querySelector('.branch-card.active');
+                    if (activeCard) activeCard.classList.remove('active');
+                    branchCard.classList.add('active');
+                    selectedBranch = branch;
+                    addDepartmentButton.disabled = false;
+
+                    try {
+                        await showBranchDetails(branch);
+                    } catch (error) {
+                        console.error('Error al cargar los detalles:', error);
+                    } finally {
+                        allCards.forEach(card => {
+                            card.disabled = false;
+                            card.style.opacity = '1';
+                            card.style.cursor = 'pointer';
+                        });
+                        branchCard.disabled = true;
+                        branchCard.style.cursor = 'default';
+                    }
+                });
+
+                branchesList.appendChild(branchCard);
+            }
         }
 
         async function showBranchDetails(branch) {
             branchDetails.innerHTML = '<div class="empty-state">Cargando estructura...</div>';
-            const branchDepartments = await API_UTILS.get_filter_by_column(
-                "/departments/", "branch", branch.id
-            );
+            const branchDepartments = await API_UTILS.get_filter_by_column('/departments/', 'branch', branch.id) || [];
 
-            if (!branchDepartments) {
+            if (branchDepartments.length === 0) {
                 branchDetails.innerHTML = '<div class="empty-state">Esta sucursal no tiene departamentos asignados.</div>';
                 return;
             }
 
-            for (const department of branchDepartments) {
-                const departmentSupervisor = await API_UTILS.get_filter_by_column(
-                    "/users/", "id", department.supervisor
-                );
+            branchDetails.innerHTML = '';
 
-                const departmentWorkGroups = await API_UTILS.get_filter_by_column(
-                    "/work_groups/", "department", department.id
-                );
+            for (const department of branchDepartments) {
+                const departmentSupervisor = await API_UTILS.get_filter_by_column('/users/', 'id', department.supervisor) || [];
+                const departmentWorkGroups = await API_UTILS.get_filter_by_column('/work_groups/', 'department', department.id) || [];
 
                 const departmentCard = document.createElement('div');
                 departmentCard.className = 'department-card';
@@ -194,25 +418,22 @@
                             <div class="department-title">${department.name}</div>
                             <div class="department-meta">${departmentWorkGroups.length} grupo${departmentWorkGroups.length === 1 ? '' : 's'}</div>
                         </div>
-                        <div class="department-supervisor">Supervisor: ${departmentSupervisor.full_name}</div>
+                        <div class="department-header-right">
+                            <button type="button" class="panel-action-button add-workgroup-button" aria-label="Agregar grupo de trabajo">+</button>
+                            <div class="department-supervisor">Supervisor: ${departmentSupervisor[0] ? departmentSupervisor[0].first_name + ' ' + departmentSupervisor[0].last_name : 'N/A'}</div>
+                        </div>
                     </div>
                 `;
 
                 const workgroupsContainer = document.createElement('div');
                 workgroupsContainer.className = 'workgroups-list';
 
-                if (!departmentWorkGroups) {
+                if (departmentWorkGroups.length === 0) {
                     workgroupsContainer.innerHTML = '<div class="empty-state">No se encontraron grupos de trabajo.</div>';
-                } 
-                else {
+                } else {
                     for (const workGroup of departmentWorkGroups) {
-                        const workGroupSupervisor = await API_UTILS.get_filter_by_column(
-                            "/users/", "id", workGroup.supervisor
-                        );
-
-                        const workGroupMembers = await API_UTILS.get_filter_by_column(
-                            "/work_group_members/", "work_group", workGroup.id
-                        );
+                        const workGroupSupervisor = await API_UTILS.get_filter_by_column('/users/', 'id', workGroup.supervisor) || [];
+                        const workGroupMembers = await API_UTILS.get_filter_by_column('/work_group_members/', 'workgroup', workGroup.id) || [];
 
                         const workgroupCard = document.createElement('div');
                         workgroupCard.className = 'workgroup-card';
@@ -220,7 +441,7 @@
                             <div class="workgroup-name">${workGroup.name}</div>
                             <div class="workgroup-meta">
                                 <span>${workGroupMembers.length} miembro${workGroupMembers.length === 1 ? '' : 's'}</span>
-                                <span>Supervisor: ${workGroupSupervisor.full_name}</span>
+                                <span>Supervisor: ${workGroupSupervisor[0] ? workGroupSupervisor[0].first_name + ' ' + workGroupSupervisor[0].last_name : 'N/A'}</span>
                             </div>
                         `;
                         workgroupsContainer.appendChild(workgroupCard);
@@ -229,11 +450,24 @@
 
                 departmentCard.appendChild(workgroupsContainer);
                 branchDetails.appendChild(departmentCard);
+
+                const addWorkgroupButton = departmentCard.querySelector('.add-workgroup-button');
+                if (addWorkgroupButton) {
+                    addWorkgroupButton.addEventListener('click', () => {
+                        openModal(
+                            'Crear nuevo grupo de trabajo',
+                            `Rellena los datos para crear un grupo de trabajo en el departamento ${department.name}.`,
+                            'workgroup',
+                            { departmentId: department.id }
+                        );
+                    });
+                }
             }
         }
 
     });
     </script>
 
-</div>    
+</div>
+
 {% endblock %}
