@@ -136,7 +136,10 @@
                 </div>
             `;
  
-            card.addEventListener('click', () => openModelDetail(model));
+            card.addEventListener('click', () => {
+                localStorage.setItem('selected_model_id', model.id);
+                window.location.href = "{% url 'model_view' %}";
+            });
             grid.appendChild(card);
         });
     }
@@ -171,24 +174,7 @@
             grid.innerHTML = '<div class="models-empty">Error al cargar los modelos. Intente de nuevo.</div>';
         }
     }
- 
-    // ── Navegación: abrir detalle ───────────────────────────────────────────
-    function openModelDetail(model) {
-        document.getElementById('models-list-view').classList.add('hidden');
-        document.getElementById('model-detail-view').classList.add('active');
- 
-        // TODO: pasar el model al contenido del detalle cuando se implemente
-        // Datos disponibles en el objeto `model`: id, title, accreditor, start_date, end_date
-        // Ver comentarios en el HTML del detalle para los endpoints que se deben usar
-        console.log('Modelo seleccionado:', model);
-    }
- 
-    // ── Navegación: volver a lista ──────────────────────────────────────────
-    function closeModelDetail() {
-        document.getElementById('model-detail-view').classList.remove('active');
-        document.getElementById('models-list-view').classList.remove('hidden');
-    }
- 
+
     // ── Init ────────────────────────────────────────────────────────────────
     document.addEventListener("DOMContentLoaded", async () => {
         // Botón nuevo modelo
@@ -196,10 +182,6 @@
             window.location.href = "{% url 'new_certification_model' %}";
         });
  
-        // Botón volver en el detalle
-        document.getElementById("detail-back-btn").addEventListener("click", closeModelDetail);
- 
-        // Auth
         const accessToken = localStorage.getItem('access_token');
         const userMetadataStr = localStorage.getItem('user_metadata');
  

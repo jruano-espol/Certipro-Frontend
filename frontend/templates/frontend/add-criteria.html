@@ -18,23 +18,34 @@
         <div class="form-container">
             <h1 class="form-title">Agregar Criterio</h1>
             
-            <form class="criteria-form">
-                <!-- Código Field -->
+            <form id="criteria-form">
+                <!-- Prioridad -->
                 <div class="form-group">
-                    <label for="codigo" class="form-label">Código <span class="required">*</span></label>
-                    <input type="text" id="codigo" name="codigo" class="form-input" placeholder="Ej. ISO-9001-4.3" required>
+                    <label for="priority-select" class="form-label">Prioridad <span class="required">*</span></label>
+                    <div class="priority-select form-input">
+                        <select name="priority">
+                            <option value="Baja">Baja</option>
+                            <option value="Alta">Alta</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Código -->
+                <div class="form-group">
+                    <label for="code" class="form-label">Código <span class="required">*</span></label>
+                    <input type="text" id="code" name="code" class="form-input" placeholder="Ej. ISO-9001-4.3" required>
                 </div>
 
                 <!-- Título Field -->
                 <div class="form-group">
-                    <label for="titulo" class="form-label">Título <span class="required">*</span></label>
-                    <input type="text" id="titulo" name="titulo" class="form-input" placeholder="Ej. Alcance del Sistema" required>
+                    <label for="title" class="form-label">Título <span class="required">*</span></label>
+                    <input type="text" id="title" name="title" class="form-input" placeholder="Ej. Alcance del Sistema" required>
                 </div>
 
                 <!-- Descripción Field -->
                 <div class="form-group">
-                    <label for="descripcion" class="form-label">Descripción</label>
-                    <textarea id="descripcion" name="descripcion" class="form-textarea" placeholder="Describe el criterio..." rows="6"></textarea>
+                    <label for="description" class="form-label">Descripción</label>
+                    <textarea id="description" name="description" class="form-textarea" placeholder="Describe el criterio..." rows="6"></textarea>
                 </div>
 
                 <!-- Modelos Checklist -->
@@ -73,6 +84,29 @@
 
         const cancelButton = document.querySelector('.btn-cancel');
         cancelButton.addEventListener('click', () => {
+            history.back();
+        });
+
+        const criteriaForm = document.getElementById("criteria-form");
+        criteriaForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const formData = new FormData(criteriaForm);
+
+            const modelIDs = formData.getAll('modelos');
+            const sharedValues = {
+                parent: null,
+                priority: formData.get('priority'),
+                code: formData.get('code'),
+                title: formData.get('title'),
+                description: formData.get('description'),
+            };
+            for (const modelID of modelIDs) {
+                const criteria = {
+                    certification_model: modelID,
+                    ...sharedValues,
+                }
+                await API_UTILS.post("/criteria/", criteria);
+            }
             history.back();
         });
 

@@ -51,7 +51,7 @@ main {
     padding: 0;
 }
 
-.criteria-form {
+#criteria-form {
     display: flex;
     flex-direction: column;
     gap: 24px;
@@ -83,7 +83,73 @@ main {
     font-size: 14px;
     color: var(--text);
     background-color: var(--input-bg);
-    transition: border-color 0.2s;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+}
+
+.priority-select {
+    position: relative;
+}
+
+.priority-select > select {
+    padding: 0 !important;
+}
+
+.priority-select select {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    background: transparent;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+.priority-select select:focus {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.priority-select select {
+    width: 100%;
+    padding: 12px 36px 12px 12px;
+    border: 0;
+    border-color: transparent;
+    outline: 0;
+    outline-offset: 0;
+    box-shadow: none;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.priority-select::before {
+    content: "";
+    display: block;
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0.8em;
+    height: 0.5em;
+    background-color: #676767;
+    clip-path: polygon(100% 0%, 0 0%, 50% 100%);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.priority-select select:focus,
+.priority-select select:focus-visible {
+    border: 0;
+    border-color: transparent;
+    outline: 0;
+    outline-offset: 0;
+    box-shadow: none;
 }
 
 .form-input::placeholder,
@@ -95,6 +161,7 @@ main {
 .form-textarea:focus {
     outline: none;
     border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(59, 72, 84, 0.12);
 }
 
 .form-textarea {
@@ -138,6 +205,7 @@ main {
 .btn {
     padding: 12px 24px;
     border-radius: var(--radius);
+    font-family: inherit;
     font-size: 14px;
     font-weight: 600;
     border: none;
