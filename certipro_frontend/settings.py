@@ -13,11 +13,11 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 # settings.py
 import os
-from dotenv import load_dotenv
+#from dotenv import load_dotenv
 
-load_dotenv() # Carga el archivo .env
-
-API_URL = os.getenv('API_URL')
+#load_dotenv() # Carga el archivo .env
+#API_URL = os.getenv('API_URL')
+API_URL = "http://127.0.0.1:8000/api"
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
