@@ -25,6 +25,7 @@
                     <div class="priority-select form-input">
                         <select name="priority">
                             <option value="Baja">Baja</option>
+                            <option value="Media">Media</option>
                             <option value="Alta">Alta</option>
                         </select>
                     </div>
@@ -107,7 +108,8 @@
                 }
                 await API_UTILS.post("/criteria/", criteria);
             }
-            history.back();
+            // Please don't use history.back() here because it needs to reload the page to show the changes.
+            window.location.href = "{% url 'model_view'%}";
         });
 
         const checkboxGroup = document.querySelector('.checkbox-group');
