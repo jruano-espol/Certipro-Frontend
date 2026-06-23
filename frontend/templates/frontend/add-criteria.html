@@ -1,0 +1,102 @@
+{% extends "frontend/base.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'frontend/style.css' %}">
+<link rel="stylesheet" href="{% static 'frontend/add-criteria.css' %}">
+
+<div class="whole-page-wrapper">
+    <a id="back-button" aria-label="Volver">
+        <!-- left arrow icon -->
+        <svg viewBox="0 0 20 20" fill="none" width="18" height="18" aria-hidden="true">
+            <path d="M11 15L6 10l5-5" stroke="#3b4854" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Volver a la vista del modelo
+    </a>
+
+    <div class="page-shell">
+        <div class="form-container">
+            <h1 class="form-title">Agregar Criterio</h1>
+            
+            <form class="criteria-form">
+                <!-- Código Field -->
+                <div class="form-group">
+                    <label for="codigo" class="form-label">Código <span class="required">*</span></label>
+                    <input type="text" id="codigo" name="codigo" class="form-input" placeholder="Ej. ISO-9001-4.3" required>
+                </div>
+
+                <!-- Título Field -->
+                <div class="form-group">
+                    <label for="titulo" class="form-label">Título <span class="required">*</span></label>
+                    <input type="text" id="titulo" name="titulo" class="form-input" placeholder="Ej. Alcance del Sistema" required>
+                </div>
+
+                <!-- Descripción Field -->
+                <div class="form-group">
+                    <label for="descripcion" class="form-label">Descripción</label>
+                    <textarea id="descripcion" name="descripcion" class="form-textarea" placeholder="Describe el criterio..." rows="6"></textarea>
+                </div>
+
+                <!-- Modelos Checklist -->
+                <div class="form-group">
+                    <label class="form-label">Modelos a los que pertenece este criterio</label>
+                    <div class="checkbox-group">
+                        <!-- Checkboxes will be dynamically inserted here -->
+                    </div>
+                </div>
+
+                <!-- Buttons -->
+                <div class="form-actions">
+                    <button type="button" class="btn btn-cancel">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Agregar Criterio</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const accessToken = localStorage.getItem('access_token');
+        const userMetadataStr = localStorage.getItem('user_metadata');
+
+        if (!accessToken || !userMetadataStr) {
+            localStorage.clear();
+            window.location.href = "{% url 'select_profile' %}";
+            return;
+        }
+
+        const backButton = document.getElementById('back-button');
+        backButton.addEventListener('click', () => {
+            history.back();
+        });
+
+        const cancelButton = document.querySelector('.btn-cancel');
+        cancelButton.addEventListener('click', () => {
+            history.back();
+        });
+
+        const checkboxGroup = document.querySelector('.checkbox-group');
+        const allModels = await API_UTILS.get("/certification_models/");
+        for (const model of allModels) {
+            const checkboxItem = document.createElement('div');
+            checkboxItem.className = 'checkbox-item';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = `modelo-${model.id}`;
+            checkbox.name = 'modelos';
+            checkbox.value = model.id;
+
+            const label = document.createElement('label');
+            label.htmlFor = `modelo-${model.id}`;
+            label.className = 'checkbox-label';
+            label.textContent = `${model.title} - ${model.accreditor}`;
+
+            checkboxItem.appendChild(checkbox);
+            checkboxItem.appendChild(label);
+            checkboxGroup.appendChild(checkboxItem);
+        }
+    });
+</script>
+{% endblock %}

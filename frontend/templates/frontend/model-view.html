@@ -52,6 +52,11 @@
         loadModelCriteria();
     });
 
+    const addCriterionBtn = document.getElementById('add-criterion-btn');
+    addCriterionBtn.addEventListener('click', () => {
+        window.location.href = "{% url 'add_criteria' %}";
+    });
+
     async function loadModelCriteria() {
         const modelId = localStorage.getItem('selected_model_id');
         if (!modelId) {
@@ -59,27 +64,23 @@
             return;
         }
 
-        try {
-            // Get all criteria for this model
-            const criteria = await API_UTILS.get_filter_by_column(
-                "/criteria/",
-                "certification_model_id",
-                modelId
-            );
+        // Get all criteria for this model
+        const criteria = await API_UTILS.get_filter_by_column(
+            "/criteria/",
+            "certification_model_id",
+            modelId
+        );
 
-            // Organize criteria into tree structure
-            const rootCriteria = criteria.filter(c => c.parent === null);
-            
-            // Build and render the tree
-            const container = document.getElementById('criteria-container');
-            container.innerHTML = '';
+        // Organize criteria into tree structure
+        const rootCriteria = criteria.filter(c => c.parent === null);
+        
+        // Build and render the tree
+        const container = document.getElementById('criteria-container');
+        container.innerHTML = '';
 
-            for (const criterion of rootCriteria) {
-                const element = await buildCriterionElement(criterion, criteria);
-                container.appendChild(element);
-            }
-        } catch (error) {
-            console.error('Error loading criteria:', error);
+        for (const criterion of rootCriteria) {
+            const element = await buildCriterionElement(criterion, criteria);
+            container.appendChild(element);
         }
     }
 

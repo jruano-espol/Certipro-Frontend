@@ -166,7 +166,6 @@ main {
     background-color: #fafbfc;
 }
 
-/* ensure the main/page shell keeps content centered and constrained */
 .page-shell {
     max-width: 1100px;
     margin: 0 auto;
