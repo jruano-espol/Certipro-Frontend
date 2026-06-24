@@ -110,8 +110,10 @@
             html += '<div class="collapse-btn-placeholder"></div>';
         }
 
+        const criterionName = `${criterion.code}: ${criterion.title}`;
+
         html += `
-            <span class="criterion-name">${criterion.title || 'Sin nombre'}</span>
+            <span class="criterion-name">${criterionName}</span>
             <div class="criterion-actions">
                 <span class="task-count">${criteriaTasks.length} tareas</span>
                 <button class="action-btn edit-btn">
@@ -132,6 +134,14 @@
         }
 
         div.innerHTML = html;
+
+        let addSubcriteriaBtn = div.querySelector('.add-subcriteria-btn');
+        if (addSubcriteriaBtn) {
+            addSubcriteriaBtn.addEventListener('click', () => {
+                localStorage.setItem("selected_criteria_id", criterion.id);
+                window.location.href = "{% url 'add_criteria' %}";
+            });
+        }
 
         // Add collapse functionality
         if (hasChildren) {

@@ -16,7 +16,7 @@
 
     <div class="page-shell">
         <div class="form-container">
-            <h1 class="form-title">Agregar Criterio</h1>
+            <h1 id="form-title">Agregar Criterio</h1>
             
             <form id="criteria-form">
                 <!-- Prioridad -->
@@ -78,15 +78,26 @@
             return;
         }
 
-        const backButton = document.getElementById('back-button');
-        backButton.addEventListener('click', () => {
+        const goBack = () => {
+            localStorage.removeItem("selected_criteria_id");
             history.back();
-        });
+        };
+
+        const backButton = document.getElementById('back-button');
+        backButton.addEventListener('click', goBack);
 
         const cancelButton = document.querySelector('.btn-cancel');
-        cancelButton.addEventListener('click', () => {
-            history.back();
-        });
+        cancelButton.addEventListener('click', goBack);
+
+        let formTitle = document.getElementById("form-title");
+        const selectedCriteriaID = localStorage.getItem("selected_criteria_id");
+        let selectedCriteria = null;
+        if (selectedCriteriaID !== null) {
+            formTitle.textContent = "Agregar Subcriterio";
+            selectedCriteria = await API_UTILS.get_filter_by_column("/criteria/", "id", selectedCriteriaID);
+            selectedCriteria = selectedCriteria.length > 0 ? selectedCriteria[0] : null;
+            formTitle.textContent += ` a ${selectedCriteria.code}: ${selectedCriteria.title}`;
+        }
 
         const criteriaForm = document.getElementById("criteria-form");
         criteriaForm.addEventListener("submit", async (event) => {
@@ -95,7 +106,7 @@
 
             const modelIDs = formData.getAll('modelos');
             const sharedValues = {
-                parent: null,
+                parent: selectedCriteriaID,
                 priority: formData.get('priority'),
                 code: formData.get('code'),
                 title: formData.get('title'),
@@ -109,6 +120,7 @@
                 await API_UTILS.post("/criteria/", criteria);
             }
             // Please don't use history.back() here because it needs to reload the page to show the changes.
+            localStorage.removeItem("selected_criteria_id");
             window.location.href = "{% url 'model_view'%}";
         });
 
