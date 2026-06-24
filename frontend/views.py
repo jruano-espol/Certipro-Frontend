@@ -39,6 +39,9 @@ def new_certification_model(request):
 def model_view(request):
     return render(request, "frontend/model-view.html", {'api_url': api_url})
 
+def criteria_tasks(request):
+    return render(request, "frontend/criteria-tasks.html", {'api_url': api_url})
+
 def add_criteria(request):
     return render(request, "frontend/add-criteria.html", {'api_url': api_url})
 

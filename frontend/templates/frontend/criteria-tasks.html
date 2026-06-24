@@ -1,0 +1,123 @@
+{% extends "frontend/base.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'frontend/style.css' %}">
+<link rel="stylesheet" href="{% static 'frontend/criteria-tasks.css' %}">
+
+<div class="criteria-tasks-wrapper">
+    <a id="back-button" aria-label="Volver">
+        <!-- left arrow icon -->
+        <svg viewBox="0 0 20 20" fill="none" width="18" height="18" aria-hidden="true">
+            <path d="M11 15L6 10l5-5" stroke="#3b4854" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Volver a la vista de un modelo
+    </a>
+
+    <div class="page-shell">
+        <div id="tasks-title">
+            <div id="tasks-title-content">
+                <img src="{% static 'frontend/svgs/task.svg' %}" width="24" height="24">
+                <h2 id="tasks-title-text">Tareas del criterio</h2>
+            </div>
+        </div>
+        <div id="task-list">
+            <!-- task cards will be dynamically added here with javascript -->
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const accessToken = localStorage.getItem('access_token');
+        const userMetadataStr = localStorage.getItem('user_metadata');
+        const selectedCriteriaID = localStorage.getItem('selected_criteria_id');
+
+        if (!accessToken || !userMetadataStr || !selectedCriteriaID) {
+            localStorage.clear();
+            window.location.href = "{% url 'select_profile' %}";
+            return;
+        }
+        const backButton = document.getElementById('back-button');
+        backButton.addEventListener('click', () => {
+            localStorage.removeItem('selected_criteria_id');
+            history.back();
+        });
+
+        let selectedCriteria = await API_UTILS.get_filter_by_column(
+            "/criteria/", "id", selectedCriteriaID
+        );
+        selectedCriteria = selectedCriteria.length > 0 ? selectedCriteria[0] : null;
+
+        const tasksTitleText = document.getElementById("tasks-title-text");
+        tasksTitleText.textContent += ` ${selectedCriteria.code} "${selectedCriteria.title}"`;
+
+        const criteriaTasks = await API_UTILS.get_filter_by_column(
+            "/tasks/", "criterion", selectedCriteriaID
+        );
+
+        const workgroups = await API_UTILS.get("/work_groups/");
+
+        const taskList = document.getElementById("task-list");
+
+        function formatDate(dateStr) {
+            if (!dateStr) return "";
+            const date = new Date(dateStr);
+            return date.toLocaleDateString("es-ES", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric"
+            });
+        }
+
+        if (!criteriaTasks || criteriaTasks.length === 0) {
+            taskList.innerHTML = '<p class="no-tasks">No hay tareas para este criterio.</p>';
+            return;
+        }
+
+        criteriaTasks.forEach(task => {
+            let workgroupOptions = "";
+            for (const workgroup of workgroups) {
+                const selected = workgroup.id === task.group_responsible ? " selected" : "";
+                workgroupOptions += `<option value="${workgroup.id}"${selected}>${workgroup.name}</option>`;
+            }
+            const card = document.createElement("article");
+            card.className = "task-card";
+            card.innerHTML = `
+                <div class="task-card-header">
+                    <h3>${task.title || "Tarea sin título"}</h3>
+                    <form class="task-delegate-form" style="display:flex;gap:10px">
+                        <div class="workgroup-select form-input">
+                            <select name="workgroup">
+                                ${workgroupOptions}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary delegate-btn">
+                            Delegar
+                        </button>
+                    </form>
+                    <span class="task-card-dates">
+                        ${formatDate(task.start_date)} &ndash; ${formatDate(task.end_date)}
+                    </span>
+                </div>
+                <p class="task-card-description">
+                    ${task.description ? task.description : "Sin descripción"}
+                </p>
+            `;
+            
+            const taskDelegateForm = card.querySelector(".task-delegate-form");
+            taskDelegateForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const formData = new FormData(taskDelegateForm);
+                const delegatedWorkgroupID = formData.get("workgroup");
+                let updatedTask = { ...task };
+                updatedTask.group_responsible = parseInt(delegatedWorkgroupID);
+                await API_UTILS.put("/tasks/", updatedTask);
+                location.reload();
+            });
+
+            taskList.appendChild(card);
+        });
+    });
+</script>
+{% endblock %}

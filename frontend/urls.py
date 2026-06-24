@@ -11,6 +11,7 @@ urlpatterns = [
     path("upload_evidence/", views.upload_evidence, name="upload_evidence"),
     path("new_certification_model/", views.new_certification_model, name="new_certification_model"),
     path("model_view/", views.model_view, name="model_view"),
+    path("criteria_tasks/", views.criteria_tasks, name="criteria_tasks"),
     path("add_criteria/", views.add_criteria, name="add_criteria"),
     path("tareas/", views.tareas, name="tareas"),
     path("principal_miembro/", views.principal_miembro, name="principal_miembro"),

@@ -1,8 +1,8 @@
 
-const API_UTILS={
+const API_UTILS = {
     baseUrl: window.API_BASE_URL,
     
-    get_headers(){
+    get_headers() {
         const accessToken = localStorage.getItem('access_token');
         return { 'Authorization': `Bearer ${accessToken}` }
     },
@@ -28,12 +28,15 @@ const API_UTILS={
             throw error;
         }
     },
-    async get_by_id(endpoint, id){
+
+    async get_by_id(endpoint, id) {
         return await this.get(`${endpoint}${id}/`)
     },
-    async get_filter_by_column(endpoint, column, id){
+
+    async get_filter_by_column(endpoint, column, id) {
         return await this.get(`${endpoint}?${column}=${id}`)
     },
+
     async post(endpoint, data) {
         try {
             const response = await fetch(`${this.baseUrl}${endpoint}`, {
@@ -48,6 +51,24 @@ const API_UTILS={
             return await response.json();
         } catch (error) {
             console.error(`Error en POST ${endpoint}:`, error);
+            throw error;
+        }
+    },
+
+    async put(endpoint, data) {
+        try {
+            const response = await fetch(`${this.baseUrl}${endpoint}`, {
+                method: 'PUT',
+                headers: {
+                    ...this.get_headers(),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return await response.json();
+        } catch (error) {
+            console.error(`Error en PUT ${endpoint}:`, error);
             throw error;
         }
     }
