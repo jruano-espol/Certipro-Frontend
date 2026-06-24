@@ -473,3 +473,24 @@ main {
     line-height: 1.7;
     font-size: 15px;
 }
+
+/* Progress color classes */
+.progress-red { color: #e11d48; }
+.progress-yellow { color: #b45309; }
+.progress-green { color: #047857; }
+.progress-blue { color: #0ea5e9; }
+
+/* Uploaded evidence badge styles */
+.evidence-status {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 12px;
+    margin-top: 12px;
+    align-self: flex-end;
+}
+.evidence-status.approved { background: #dcfce7; color: #065f46; }
+.evidence-status.in-review { background: #fff7ed; color: #92400e; }
+.evidence-status.rejected { background: #fee2e2; color: #991b1b; }
+.evidence-status.unknown { background: #f1f5f9; color: #475569; }

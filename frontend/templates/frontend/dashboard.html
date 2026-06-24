@@ -107,6 +107,29 @@
                     <div id="widget-pending-tasks-value" class="widget-value">-</div>
                 </article>
             </div>
+
+            <div class="organization-layout">
+                <aside class="organization-sidebar">
+                    <div class="organization-panel-header">
+                        <div class="panel-heading">
+                            <h2>Progreso General</h2>
+                        </div>
+                        <h1 id="general-progress-value" class="">-</h1>
+                        <p id="general-progress-tasks-completed"></p>
+                    </div>
+                </aside>
+
+                <section class="organization-details">
+                    <div class="organization-panel-header">
+                        <div class="panel-heading">
+                            <h2>Últimas Evidencias Subidas</h2>                        
+                        </div>
+                    </div>
+                    <div id="uploaded-evidences" class="branch-details">
+                        <div class="empty-state">Seleccione un modelo para ver las evidencias más recientes.</div>
+                    </div>
+                </section>
+            </div>
         </section>
     </main>
 </div>
@@ -176,10 +199,14 @@
             document.getElementById('widget-end-date-value').innerText = "-";
             document.getElementById('widget-next-period-value').innerText = "-";
             document.getElementById("widget-next-period-title").innerText = "Próxima Fase"
+
             document.getElementById('widget-number-criteria-value').innerText = "-";
             document.getElementById('widget-completed-tasks-value').innerText = "-";
             document.getElementById('widget-in-review-tasks-value').innerText = "-";
             document.getElementById('widget-pending-tasks-value').innerText = "-";
+
+            document.getElementById('general-progress-value').innerText = "-";
+            document.getElementById('general-progress-tasks-completed').innerText = "-";
                 
             if (!modelId) return;
 
@@ -247,60 +274,80 @@
                 // Calcular contadores analíticos
                 let completedTasks = 0;
                 let reviewTasks = 0;
+                const modelUploadedEvidencesData = [];
 
-                modelTasks.forEach(task => {
+                for (const task of modelTasks) {
                     const reqVersionId = task.requirement_version; 
 
-                    if (!reqVersionId) {
-                    return; 
-                    }
+                    if (!reqVersionId) continue;
 
                     const taskReqEvidences = allReqEvidences.filter(re => re.requirement_version === reqVersionId);
 
-                    if (taskReqEvidences.length === 0) {
-                    return; 
+                    if (taskReqEvidences.length === 0) continue;
+
+                    let evidencesStatus = await Promise.all(taskReqEvidences.map(async reqEv => {
+                    const allUploadedEvidencesForThisReq = allUploadedEvidences
+                    .filter(ue => ue.required_evidence === reqEv.id)
+                    .sort((a, b) => b.id - a.id);
+
+                    for (const ue of allUploadedEvidencesForThisReq) {
+                    const workGroupsResponsible = await API_UTILS.get_filter_by_column(
+                    "/work_groups/", "id", task.group_responsible
+                    );
+                    const workGroupResponsible = workGroupsResponsible[0];
+
+                    let uploadedEvidenceStatus = "Unknown";
+
+                    const uploadedEvidenceFeedbacks = allFeedbacks.filter(f => 
+                    f.uploaded_evidence === ue.id
+                    );
+
+                    if (uploadedEvidenceFeedbacks.length > 0){
+                    uploadedEvidenceStatus = uploadedEvidenceFeedbacks[0].result_type;
+                    } else {
+                    uploadedEvidenceStatus = "En Revisión";
                     }
 
-                    let evidencesStatus = taskReqEvidences.map(reqEv => {
-                        // Encontrar las evidencias subidas para esta evidencia requerida en específico
-                        const uploadedForThisReq = allUploadedEvidences
-                        .filter(ue => ue.required_evidence === reqEv.id)
-                        .sort((a, b) => b.id - a.id); 
+                    const ueData = {
+                    'file_name': ue.file_path ? ue.file_path.split("/").pop() : 'Archivo sin nombre',
+                    'group_responsible': workGroupResponsible ? workGroupResponsible.name : 'N/D',
+                    'uploaded_at': ue.uploaded_at,
+                    'status': uploadedEvidenceStatus,
+                    'task_title': task.title
+                    };
 
-                        const mostRecentUpload = uploadedForThisReq[0];
+                    console.log("UEData -> ", ueData);
+                    modelUploadedEvidencesData.push(ueData);
+                    }
 
-                        // Si nunca han subido nada, marcamos que no tiene feedback y no está aprobada
-                        if (!mostRecentUpload) {
-                            return { hasUpload: false, hasFeedback: false, isApproved: false };
-                        }
+                    const mostRecentUpload = allUploadedEvidencesForThisReq[0];
 
-                        // Buscar los feedbacks asociados a la evidencia subida más reciente (ordenados por el más nuevo)
-                        const feedbacksForUpload = allFeedbacks
-                        .filter(f => f.uploaded_evidence === mostRecentUpload.id)
-                        .sort((a, b) => b.id - a.id);
+                    if (!mostRecentUpload) {
+                    return { hasUpload: false, hasFeedback: false, isApproved: false };
+                    }
 
-                        const mostRecentFeedback = feedbacksForUpload[0];
+                    const feedbacksForUpload = allFeedbacks
+                    .filter(f => f.uploaded_evidence === mostRecentUpload.id)
+                    .sort((a, b) => b.id - a.id);
 
-                        return {
-                            hasUpload: true,
-                            hasFeedback: !!mostRecentFeedback,
-                            isApproved: mostRecentFeedback ? mostRecentFeedback.result_type === 'APPROVED' : false
-                        };
-                    });
+                    const mostRecentFeedback = feedbacksForUpload[0];
 
-                    // AL MENOS UNA evidencia requerida tiene una subida reciente que NO tiene feedback
+                    return {
+                    hasUpload: true,
+                    hasFeedback: !!mostRecentFeedback,
+                    isApproved: mostRecentFeedback ? mostRecentFeedback.result_type === 'APPROVE' : false
+                    };
+                    }));
+
                     const hasAtLeastOneInReview = evidencesStatus.some(status => status.hasUpload && !status.hasFeedback);
-
-                    // TODAS las evidencias requeridas tienen una subida, tienen feedback y el resultado es APPROVED
                     const areAllApproved = evidencesStatus.every(status => status.hasUpload && status.hasFeedback && status.isApproved);
 
                     if (areAllApproved) {
-                        completedTasks++;
-                    } 
-                    else if (hasAtLeastOneInReview) {
-                        reviewTasks++;
+                    completedTasks++;
+                    } else if (hasAtLeastOneInReview) {
+                    reviewTasks++;
                     }
-                });
+                }
 
                 // Calcular las pendientes (el resto de las tareas del modelo)
                 const totalTasksCount = modelTasks.length;
@@ -311,13 +358,102 @@
                 document.getElementById('widget-completed-tasks-value').innerText = completedTasks;
                 document.getElementById('widget-in-review-tasks-value').innerText = reviewTasks;
                 document.getElementById('widget-pending-tasks-value').innerText = pendingTasks;
-
-                // Calcular e inyectar Progreso Circular
-                // TODO
                 
-                // Pintar la Lista de Criterios (Fila Derecha)
-                // TODO
+                const completedTasksPercentage = (
+                    totalTasksCount > 0
+                    ? +((completedTasks / totalTasksCount) * 100).toFixed(2)
+                    : 0
+                );
+                document.getElementById('general-progress-value').innerText = (
+                    `${completedTasksPercentage}%`
+                );
+                // Apply color based on percentage
+                const el = document.getElementById('general-progress-value');
+                el.classList.remove('progress-red','progress-yellow','progress-green','progress-blue');
+                if (completedTasksPercentage === 100) {
+                    el.classList.add('progress-blue');
+                } else if (completedTasksPercentage >= 80) {
+                    el.classList.add('progress-green');
+                } else if (completedTasksPercentage >= 50) {
+                    el.classList.add('progress-yellow');
+                } else {
+                    el.classList.add('progress-red');
+                }
+                document.getElementById('general-progress-tasks-completed').innerText = (
+                    `${completedTasks} de ${totalTasksCount} tareas completadas.`
+                );
+                
+                // Pintar la Lista de Evidencias subidas (Fila Derecha)
+                modelUploadedEvidencesData.sort((a, b) => b.uploaded_at - a.uploaded_at);
 
+                const uploadedContainer = document.getElementById('uploaded-evidences');
+                uploadedContainer.innerHTML = '';
+
+                if (modelUploadedEvidencesData.length === 0) {
+                    uploadedContainer.innerHTML = '<div class="empty-state">No se encontraron evidencias subidas.</div>';
+                } else {
+                    modelUploadedEvidencesData.sort((a, b) => new Date(b.uploaded_at) - new Date(a.uploaded_at));
+
+                    modelUploadedEvidencesData.forEach(ue => {
+                        const card = document.createElement('div');
+                        card.className = 'branch-card';
+
+                        const title = document.createElement('div');
+                        title.className = 'branch-card-title';
+                        title.innerText = ue.file_name || 'Archivo sin nombre';
+
+                        const meta = document.createElement('div');
+                        meta.className = 'branch-card-meta';
+
+                        const taskLine = document.createElement('div');
+                        taskLine.innerText = ue.task_title || '';
+
+                        const groupLine = document.createElement('div');
+                        const groupName = ue.group_responsible || 'N/D';
+                        groupLine.innerText = 'Grupo: ' + groupName;
+
+                        const dateLine = document.createElement('div');
+                        const uploadedDate = ue.uploaded_at 
+                        ? new Date(ue.uploaded_at).toLocaleString(
+                            'es-ES', { 
+                                day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+                            }
+                        ) 
+                        : '-';
+                        dateLine.innerText = uploadedDate;
+
+                        meta.appendChild(taskLine);
+                        meta.appendChild(groupLine);
+                        meta.appendChild(dateLine);
+
+                        const statusBadge = document.createElement('div');
+                        statusBadge.className = 'evidence-status';                        
+
+                        if (ue.status == 'APPROVE') {
+                            statusBadge.classList.add('approved');
+                            statusBadge.innerText = "Aprobada";
+                        }
+                        else if (ue.status == 'REJECT') {
+                            statusBadge.classList.add('rejected');
+                            statusBadge.innerText = "Rechazada";
+                        }
+                        else if (ue.status == 'En Revisión') {
+                            statusBadge.classList.add('in-review');
+                            statusBadge.innerText = "En Revisión";
+                        }
+                        else {
+                            statusBadge.classList.add('unknown');
+                            statusBadge.innerText = "Desconocida";
+                        }
+
+                        card.appendChild(title);
+                        card.appendChild(meta);
+                        card.appendChild(statusBadge);
+
+                        uploadedContainer.appendChild(card);
+                    });                    
+                }
+                console.log("Dashboard rellenado sin errores!")
             } 
             catch (err) {
                 console.error("Error renderizando el dashboard dinámico:", err);
