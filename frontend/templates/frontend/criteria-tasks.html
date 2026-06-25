@@ -109,10 +109,12 @@
             taskDelegateForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
                 const formData = new FormData(taskDelegateForm);
-                const delegatedWorkgroupID = formData.get("workgroup");
-                let updatedTask = { ...task };
-                updatedTask.group_responsible = parseInt(delegatedWorkgroupID);
-                await API_UTILS.put("/tasks/", updatedTask);
+                const delegatedWorkgroupID = parseInt(formData.get("workgroup"));
+                let body = {
+                    "group_responsible": delegatedWorkgroupID,
+                };                
+
+                await API_UTILS.patch("/tasks/", task.id, body);
                 location.reload();
             });
 

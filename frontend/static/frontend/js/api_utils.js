@@ -7,11 +7,18 @@ const API_UTILS = {
         return { 'Authorization': `Bearer ${accessToken}` }
     },
 
-    async get(endpoint) {
+    async fetch(endpoint, method, body = null) {
         try {
+            console.log(
+                `Attempting ${method} fetch at: ${endpoint} ${body ? `\nWith: ${JSON.stringify(body)}` : ''}`
+            );            
             const response = await fetch(`${this.baseUrl}${endpoint}`, {
-                method: 'GET',
-                headers: this.get_headers()
+                method: method,
+                headers: {
+                    ...this.get_headers(),
+                    'Content-Type': 'application/json'
+                },
+                body: body ? JSON.stringify(body) : null
             });
 
             // Si hay error de autenticación (Token expirado), redirigir al login
@@ -22,54 +29,38 @@ const API_UTILS = {
             }
 
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            return await response.json();
+
+            const response_json = await response.json();
+            console.log(`SUCCESFUL\nResponse: ${JSON.stringify(response_json)}`);
+
+            return response_json;
         } catch (error) {
-            console.error(`Error en GET ${endpoint}:`, error);
+            console.error(`Error en {${method}} ${endpoint}:`, error);
             throw error;
         }
+    },
+
+    async get(endpoint) {
+        return await this.fetch(endpoint, 'GET');
     },
 
     async get_by_id(endpoint, id) {
-        return await this.get(`${endpoint}${id}/`)
+        return await this.fetch(`${endpoint}${id}/`, 'GET');
     },
 
     async get_filter_by_column(endpoint, column, id) {
-        return await this.get(`${endpoint}?${column}=${id}`)
+        return await this.fetch(`${endpoint}?${column}=${id}`, 'GET');
     },
 
-    async post(endpoint, data) {
-        try {
-            const response = await fetch(`${this.baseUrl}${endpoint}`, {
-                method: 'POST',
-                headers: {
-                    ...this.get_headers(),
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            });
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            return await response.json();
-        } catch (error) {
-            console.error(`Error en POST ${endpoint}:`, error);
-            throw error;
-        }
+    async post(endpoint, body) {
+        return await this.fetch(endpoint, 'POST', body);
     },
 
-    async put(endpoint, data) {
-        try {
-            const response = await fetch(`${this.baseUrl}${endpoint}`, {
-                method: 'PUT',
-                headers: {
-                    ...this.get_headers(),
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            });
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            return await response.json();
-        } catch (error) {
-            console.error(`Error en PUT ${endpoint}:`, error);
-            throw error;
-        }
+    async put(endpoint, id, body) {
+        return await this.fetch(`${endpoint}${id}/`, 'PUT', body);
+    },
+
+    async patch(endpoint, id, body) {
+        return await this.fetch(`${endpoint}${id}/`, 'PATCH', body);
     }
 };
