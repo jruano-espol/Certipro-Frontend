@@ -80,6 +80,51 @@
             </div>
         </section>
     </main>
+
+    <div id="modelo-modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modelo-modal-title">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="modelo-modal-title">Nuevo Modelo de Certificación</h3>
+                <button type="button" id="modelo-modal-close" class="modal-close-button" aria-label="Cerrar">×</button>
+            </div>
+            <div class="modal-description">Define el nombre, acreditador y periodos de evaluación para el nuevo modelo.</div>
+            <form id="certification-form" class="modal-form" novalidate>
+                <div class="modal-fields">
+                    <div class="modal-field">
+                        <span>Título del Modelo <span style="color: #d32f2f;">*</span></span>
+                        <input id="model-title" type="text" placeholder="Ej: ISO 9001:2015 - Sistema de Gestión de Calidad">
+                    </div>
+
+                    <div class="modal-field">
+                        <span>Nombre del Acreditador <span style="color: #d32f2f;">*</span></span>
+                        <input id="accreditor-name" type="text" placeholder="Ej: International Organization for Standardization">
+                    </div>
+
+                    <div style="display: grid; gap: 20px; grid-template-columns: repeat(2, 1fr);">
+                        <div class="modal-field">
+                            <span>Fecha de Inicio <span style="color: #d32f2f;">*</span></span>
+                            <input id="start-date" type="date">
+                        </div>
+                        <div class="modal-field">
+                            <span>Fecha de Fin <span style="color: #d32f2f;">*</span></span>
+                            <input id="end-date" type="date">
+                        </div>
+                    </div>
+
+                    <div style="border-top: 1px solid rgba(15, 23, 36, 0.06); padding-top: 14px; margin-top: 4px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px;">
+                            <span style="font-weight: 700; color: #0f1724; font-size: 14px;">Periodos de Evaluación</span>
+                            <button type="button" id="add-period-btn" class="add-period-btn">+ Agregar</button>
+                        </div>
+                        <div id="periods-grid" class="periods-grid" style="display: flex; flex-direction: column; gap: 14px;"></div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" id="modelo-submit-btn" class="modal-submit-button">Crear Modelo</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -177,9 +222,113 @@
 
     // ── Init ────────────────────────────────────────────────────────────────
     document.addEventListener("DOMContentLoaded", async () => {
-        // Botón nuevo modelo
+        // ── Modal para nuevo modelo ────────────────────────────────────────
+        const modeloModalOverlay = document.getElementById('modelo-modal-overlay');
+        const modeloModalClose = document.getElementById('modelo-modal-close');
+        const certificationForm = document.getElementById('certification-form');
+        const periodsGrid = document.getElementById('periods-grid');
+        const addPeriodBtn = document.getElementById('add-period-btn');
+        const modeloSubmitBtn = document.getElementById('modelo-submit-btn');
+        const trashIcon = "{% static 'frontend/svgs/trash.svg' %}";
+
+        function openModeloModal() {
+            modeloModalOverlay.classList.remove('hidden');
+        }
+
+        function closeModeloModal() {
+            modeloModalOverlay.classList.add('hidden');
+            certificationForm.reset();
+            periodsGrid.innerHTML = '';
+        }
+
+        function createPeriodItem(index) {
+            const item = document.createElement('div');
+            item.style.cssText = 'display: grid; gap: 12px; grid-template-columns: repeat(2, 1fr); padding: 12px; border: 1px solid rgba(15, 23, 36, 0.08); border-radius: 12px; background: rgba(15, 23, 36, 0.02); position: relative;';
+            item.className = 'period-item';
+            item.innerHTML = `
+                <button type="button" style="position: absolute; top: 10px; right: 10px; border: none; background: transparent; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center;" class="remove-period" aria-label="Eliminar periodo">
+                    <img src="${trashIcon}" width="16" height="16" alt="">
+                </button>
+                <div class="modal-field" style="margin: 0;">
+                    <span style="font-size: 13px;">Inicio ${index}</span>
+                    <input type="date" class="period-start" style="margin-top: 4px;">
+                </div>
+                <div class="modal-field" style="margin: 0;">
+                    <span style="font-size: 13px;">Fin ${index}</span>
+                    <input type="date" class="period-end" style="margin-top: 4px;">
+                </div>
+            `;
+            return item;
+        }
+
+        addPeriodBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const nextIndex = periodsGrid.children.length + 1;
+            periodsGrid.appendChild(createPeriodItem(nextIndex));
+        });
+
+        periodsGrid.addEventListener('click', (event) => {
+            const removeBtn = event.target.closest('.remove-period');
+            if (removeBtn) {
+                removeBtn.closest('.period-item').remove();
+            }
+        });
+
         document.getElementById("nuevo_modelo").addEventListener("click", () => {
-            window.location.href = "{% url 'new_certification_model' %}";
+            openModeloModal();
+        });
+
+        modeloModalClose.addEventListener('click', closeModeloModal);
+        modeloModalOverlay.addEventListener('click', (event) => {
+            if (event.target === event.currentTarget) closeModeloModal();
+        });
+
+        certificationForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const modelTitle = document.getElementById('model-title').value.trim();
+            const accreditorName = document.getElementById('accreditor-name').value.trim();
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+
+            if (!modelTitle || !accreditorName || !startDate || !endDate) {
+                alert('Por favor, complete todos los campos requeridos.');
+                return;
+            }
+
+            const payload = {
+                title: modelTitle,
+                accreditor: accreditorName,
+                start_date: startDate,
+                end_date: endDate
+            };
+
+            try {
+                modeloSubmitBtn.disabled = true;
+                modeloSubmitBtn.innerText = 'Creando...';
+
+                const response = await fetch("{{api_url}}" + "/certification_models/", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    closeModeloModal();
+                    await loadModels(accessToken);
+                } else {
+                    const errorData = await response.json();
+                    alert(`Error al crear el modelo: ${errorData.detail || 'Error desconocido'}`);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Ocurrió un error al crear el modelo.');
+            } finally {
+                modeloSubmitBtn.disabled = false;
+                modeloSubmitBtn.innerText = 'Crear Modelo';
+            }
         });
  
         const accessToken = localStorage.getItem('access_token');

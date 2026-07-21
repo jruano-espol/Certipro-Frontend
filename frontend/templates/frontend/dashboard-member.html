@@ -102,6 +102,40 @@
             </div>
         </section>
     </main>
+
+    <div id="evidence-modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="evidence-modal-title">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="evidence-modal-title">Subir Evidencia</h3>
+                <button type="button" id="evidence-modal-close" class="modal-close-button" aria-label="Cerrar">×</button>
+            </div>
+            <div class="modal-description" id="evidence-modal-description">Sube un archivo como evidencia para esta tarea.</div>
+            <form id="evidence-form-modal" class="modal-form">
+                <div class="modal-fields">
+                    <div class="modal-field">
+                        <span>Archivo de Evidencia</span>
+                        <div id="upload-area-modal" class="upload-area" tabindex="0" style="border: 1px dashed #dce4ee; border-radius: 16px; padding: 28px; display: flex; align-items: center; gap: 18px; cursor: pointer; background: rgba(15, 23, 36, 0.02);">
+                            <input id="file-input-modal" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,image/*" hidden>
+                            <img src="{% static 'frontend/svgs/upload.svg' %}" width="32" height="32" style="filter: brightness(0) saturate(100%) invert(16%) sepia(69%) saturate(3114%) hue-rotate(204deg) brightness(89%) contrast(97%);">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; color: #0f1724;">Haz clic para seleccionar un archivo</div>
+                                <div style="color: #667085; font-size: 13px; margin-top: 6px;">PDF, Word, Excel o imágenes (máx. 10MB)</div>
+                                <div id="selected-file-modal" style="margin-top: 10px; color: #0b3b66; font-size: 13px;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-field">
+                        <span>Descripción o Comentarios</span>
+                        <textarea name="description" placeholder="Describe brevemente el contenido de la evidencia..." style="width: 100%; min-height: 100px; padding: 12px 14px; border: 1px solid #dce4ee; border-radius: 14px; background: #fff; color: #0f1724; font-size: 14px; font-family: inherit; resize: vertical;"></textarea>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" id="evidence-submit-btn" class="modal-submit-button">Enviar Evidencia</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -243,12 +277,63 @@
         }
 
         const taskUploadButtons = document.querySelectorAll('.task-upload-btn');
+        const evidenceModalOverlay = document.getElementById('evidence-modal-overlay');
+        const evidenceModalClose = document.getElementById('evidence-modal-close');
+        const evidenceFormModal = document.getElementById('evidence-form-modal');
+        const evidenceSubmitBtn = document.getElementById('evidence-submit-btn');
+        const uploadAreaModal = document.getElementById('upload-area-modal');
+        const fileInputModal = document.getElementById('file-input-modal');
+        const selectedFileModal = document.getElementById('selected-file-modal');
+        const accessToken = localStorage.getItem('access_token');
+        let selectedTaskForEvidence = null;
+
+        function openEvidenceModal(task) {
+            selectedTaskForEvidence = task;
+            evidenceFormModal.reset();
+            selectedFileModal.textContent = '';
+            document.getElementById('evidence-modal-description').textContent = `Sube una evidencia para la tarea: ${task.title}`;
+            evidenceModalOverlay.classList.remove('hidden');
+        }
+
+        function closeEvidenceModal() {
+            evidenceModalOverlay.classList.add('hidden');
+            evidenceFormModal.reset();
+            selectedFileModal.textContent = '';
+            selectedTaskForEvidence = null;
+        }
+
+        uploadAreaModal.addEventListener('click', () => fileInputModal.click());
+        uploadAreaModal.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                fileInputModal.click();
+            }
+        });
+
+        fileInputModal.addEventListener('change', () => {
+            const file = fileInputModal.files[0];
+            selectedFileModal.textContent = file ? file.name : '';
+        });
+
         taskUploadButtons.forEach((button, index) => {
             button.addEventListener('click', () => {
                 const task = userTasks[index];
-                localStorage.setItem('selected_task_id', task.id);
-                window.location.href = "{% url 'upload_evidence' %}";
+                openEvidenceModal(task);
             });
+        });
+
+        evidenceModalClose.addEventListener('click', closeEvidenceModal);
+        evidenceModalOverlay.addEventListener('click', (event) => {
+            if (event.target === event.currentTarget) closeEvidenceModal();
+        });
+
+        evidenceFormModal.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (selectedTaskForEvidence) {
+                localStorage.setItem('selected_task_id', selectedTaskForEvidence.id);
+                // TODO: Implement evidence submission logic
+                alert('Funcionalidad de envío de evidencia aún no implementada.');
+                closeEvidenceModal();
+            }
         });
     });
 </script>
