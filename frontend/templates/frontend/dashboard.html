@@ -2,6 +2,8 @@
 {% load static %}
 
 {% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 <link rel="stylesheet" href="{% static 'frontend/dashboard.css' %}">
 
 <div class="dashboard-page">
@@ -114,8 +116,15 @@
                         <div class="panel-heading">
                             <h2>Progreso General</h2>
                         </div>
-                        <h1 id="general-progress-value" class="">-</h1>
-                        <p id="general-progress-tasks-completed"></p>
+                    </div>
+                    <!-- Contenedor para los gráficos -->
+                    <div style="display: flex; flex-direction: column; gap: 30px; margin-top: 20px;">
+                        <div style="position: relative; height: 220px;">
+                            <canvas id="tasksPieChart"></canvas>
+                        </div>
+                        <div style="position: relative; height: 220px;">
+                            <canvas id="tasksBarChart"></canvas>
+                        </div>
                     </div>
                 </aside>
 
@@ -194,268 +203,270 @@
             console.error("Error cargando modelos de certificación:", err);
         }
 
+        // --- NUEVO: Inicialización de Gráficos Globales ---
+        let pieChart, barChart;
+
+        function initCharts() {
+            // Registrar el plugin de etiquetas
+            Chart.register(ChartDataLabels);
+
+            const ctxPie = document.getElementById('tasksPieChart').getContext('2d');
+            const ctxBar = document.getElementById('tasksBarChart').getContext('2d');
+            
+            const bgColors = ['#047857', '#0ea5e9', '#e11d48'];
+
+            pieChart = new Chart(ctxPie, {
+                type: 'pie',
+                data: {
+                    labels: ['Completadas', 'En Progreso', 'Rechazadas'],
+                    datasets: [{ data: [0, 0, 0], backgroundColor: bgColors }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        title: { display: true, text: 'Porcentaje de Tareas (%)' },
+                        // Configuración de las etiquetas dentro del pastel
+                        datalabels: {
+                            color: '#ffffff',
+                            font: {
+                                weight: 'bold',
+                                size: 14
+                            },
+                            formatter: (value, ctx) => {
+                                // Calcular el total para sacar el porcentaje
+                                let dataArr = ctx.chart.data.datasets[0].data;
+                                let total = dataArr.reduce((a, b) => a + b, 0);
+                                if (total === 0 || value === 0) return ''; // No mostrar si es 0
+                                let percentage = ((value * 100) / total).toFixed(1) + "%";
+                                return percentage;
+                            }
+                        }
+                    }
+                }
+            });
+
+            barChart = new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: ['Completadas', 'En Progreso', 'Rechazadas'],
+                    datasets: [{ data: [0, 0, 0], backgroundColor: bgColors }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        title: { display: true, text: 'Cantidades Absolutas' }, 
+                        legend: { display: false },
+                        // Desactivamos los porcentajes en el de barras para que quede limpio
+                        datalabels: {
+                            display: false 
+                        }
+                    },
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                }
+            });
+        }
+
+        function updateCharts(completed, inProgress, rejected) {
+            const data = [completed, inProgress, rejected];
+            pieChart.data.datasets[0].data = data;
+            pieChart.update();
+            barChart.data.datasets[0].data = data;
+            barChart.update();
+        }
+
+        // Inicializar los gráficos vacíos
+        initCharts();
+
+        // NUEVO: Cargar el dashboard por defecto con los datos globales (sin modelo seleccionado)
+        loadModelDetails("");
+
+        // --- NUEVO: Función loadModelDetails actualizada ---
         async function loadModelDetails(modelId) {
             document.getElementById('widget-start-date-value').innerText = "-";
             document.getElementById('widget-end-date-value').innerText = "-";
             document.getElementById('widget-next-period-value').innerText = "-";
-            document.getElementById("widget-next-period-title").innerText = "Próxima Fase"
-
+            document.getElementById("widget-next-period-title").innerText = "Próxima Fase";
             document.getElementById('widget-number-criteria-value').innerText = "-";
             document.getElementById('widget-completed-tasks-value').innerText = "-";
             document.getElementById('widget-in-review-tasks-value').innerText = "-";
             document.getElementById('widget-pending-tasks-value').innerText = "-";
-
-            document.getElementById('general-progress-value').innerText = "-";
-            document.getElementById('general-progress-tasks-completed').innerText = "-";
+            document.getElementById('uploaded-evidences').innerHTML = '<div class="empty-state">Seleccione un modelo para ver las evidencias más recientes.</div>';
                 
-            if (!modelId) return;
-
             try {
-                const modelData = await API_UTILS.get_by_id(
-                    "/certification_models/", modelId
-                );
-                const criteriaData = await API_UTILS.get_filter_by_column(
-                    "/criteria/", "certification_model", modelId
-                );
                 const allTasks = await API_UTILS.get("/tasks/");
-                const periodsData = await API_UTILS.get_filter_by_column(
-                    "/periods/", "certification_model", modelId
-                );
                 const allReqEvidences = await API_UTILS.get("/required_evidences/");
                 const allUploadedEvidences = await API_UTILS.get("/uploaded_evidences/");
                 const allFeedbacks = await API_UTILS.get("/feedbacks/");
+                const allCriteria = await API_UTILS.get("/criteria/");
 
-                // Formatear fechas estéticamente (ej: "31 dic 2023")
-                const options = { day: 'numeric', month: 'short', year: 'numeric' };
-                document.getElementById('widget-start-date-value').innerText = new Date(modelData.start_date).toLocaleDateString('es-ES', options).replace('.', '');
-                document.getElementById('widget-end-date-value').innerText = new Date(modelData.end_date).toLocaleDateString('es-ES', options).replace('.', '');
+                let tasksToProcess = allTasks;
+                let modelUploadedEvidencesData = [];
 
-                // Conseguir proxima fase (period) y mostrar la mas cercana
-                // Si hay una activa, mostrar Fase en curso: nombre
-                const today = new Date();
-                today.setHours(0, 0, 0, 0); 
+                if (modelId) {
+                    const modelData = await API_UTILS.get_by_id("/certification_models/", modelId);
+                    const periodsData = await API_UTILS.get_filter_by_column("/periods/", "certification_model", modelId);
+                    const criteriaData = allCriteria.filter(c => String(c.certification_model) === String(modelId));
+                    
+                    const options = { day: 'numeric', month: 'short', year: 'numeric' };
+                    document.getElementById('widget-start-date-value').innerText = new Date(modelData.start_date).toLocaleDateString('es-ES', options).replace('.', '');
+                    document.getElementById('widget-end-date-value').innerText = new Date(modelData.end_date).toLocaleDateString('es-ES', options).replace('.', '');
 
-                let displayFase = "Sin fases programadas";
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0); 
+                    let displayFase = "Sin fases programadas";
 
-                if (periodsData && periodsData.length > 0) {
-                    const faseEnCurso = periodsData.find(p => {
-                        const start = new Date(p.start_date);
-                        const end = new Date(p.end_date);
-                        return today >= start && today <= end;
-                    });
+                    if (periodsData && periodsData.length > 0) {
+                        const faseEnCurso = periodsData.find(p => {
+                            const start = new Date(p.start_date);
+                            const end = new Date(p.end_date);
+                            return today >= start && today <= end;
+                        });
 
-                    if (faseEnCurso) {
-                        displayFase = faseEnCurso.name;
-                        document.getElementById("widget-next-period-title").innerText = "Fase En Curso"
-                    } 
-                    else {
-                        const fasesFuturas = periodsData.filter(
-                            p => new Date(p.start_date) > today
-                        ).sort(
-                            (a, b) => new Date(a.start_date) - new Date(b.start_date)
-                        );
-
-                        if (fasesFuturas.length > 0) {
-                            displayFase = fasesFuturas[0].name + ": " + fasesFuturas[0].start_date;
-                            document.getElementById("widget-next-period-title").innerText = "Próxima Fase"
+                        if (faseEnCurso) {
+                            displayFase = faseEnCurso.name;
+                            document.getElementById("widget-next-period-title").innerText = "Fase En Curso";
+                        } else {
+                            const fasesFuturas = periodsData.filter(p => new Date(p.start_date) > today)
+                                .sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+                            if (fasesFuturas.length > 0) {
+                                displayFase = fasesFuturas[0].name + ": " + fasesFuturas[0].start_date;
+                                document.getElementById("widget-next-period-title").innerText = "Próxima Fase";
+                            }
                         }
                     }
+                    document.getElementById('widget-next-period-value').style.fontSize = "18px";
+                    document.getElementById('widget-next-period-value').innerText = displayFase;
+                    document.getElementById('widget-number-criteria-value').innerText = criteriaData.length;
+
+                    const criteriaIds = criteriaData.map(c => c.id);
+                    tasksToProcess = allTasks.filter(t => criteriaIds.includes(t.criterion));
                 }
-                document.getElementById('widget-next-period-value').innerText = displayFase;
 
-                // Inyectamos el texto calculado en tu widget correspondiente
-                document.getElementById('widget-next-period-value').style.fontSize = "18px"; // Ajuste sutil por si el nombre de la fase es largo
-                document.getElementById('widget-next-period-value').innerText = displayFase;
+                let chartCompleted = 0;
+                let chartInProgress = 0;
+                let chartRejected = 0;
 
-                // Filtrar tareas que pertenezcan a los criterios de ESTE modelo
-                const criteriaIds = criteriaData.map(c => c.id);
-                const modelTasks = allTasks.filter(t => criteriaIds.includes(t.criterion));
-                
-                // Calcular contadores analíticos
-                let completedTasks = 0;
-                let reviewTasks = 0;
-                const modelUploadedEvidencesData = [];
-
-                for (const task of modelTasks) {
+                for (const task of tasksToProcess) {
                     const reqVersionId = task.requirement_version; 
-
                     if (!reqVersionId) continue;
 
                     const taskReqEvidences = allReqEvidences.filter(re => re.requirement_version === reqVersionId);
-
                     if (taskReqEvidences.length === 0) continue;
 
-                    let evidencesStatus = await Promise.all(taskReqEvidences.map(async reqEv => {
-                    const allUploadedEvidencesForThisReq = allUploadedEvidences
-                    .filter(ue => ue.required_evidence === reqEv.id)
-                    .sort((a, b) => b.id - a.id);
+                    let isTaskRejected = false;
+                    let isTaskInProgress = false;
+                    let areAllReqsApproved = true;
 
-                    for (const ue of allUploadedEvidencesForThisReq) {
-                    const workGroupsResponsible = await API_UTILS.get_filter_by_column(
-                    "/work_groups/", "id", task.group_responsible
-                    );
-                    const workGroupResponsible = workGroupsResponsible[0];
+                    for (const reqEv of taskReqEvidences) {
+                        const allUploaded = allUploadedEvidences
+                            .filter(ue => ue.required_evidence === reqEv.id)
+                            .sort((a, b) => b.id - a.id);
+                        
+                        const mostRecentUpload = allUploaded[0];
 
-                    let uploadedEvidenceStatus = "Unknown";
+                        if (!mostRecentUpload) {
+                            areAllReqsApproved = false;
+                            continue;
+                        }
 
-                    const uploadedEvidenceFeedbacks = allFeedbacks.filter(f => 
-                    f.uploaded_evidence === ue.id
-                    );
+                        if (modelId) {
+                            const workGroupsResp = await API_UTILS.get_filter_by_column("/work_groups/", "id", task.group_responsible);
+                            const wgName = (workGroupsResp && workGroupsResp[0]) ? workGroupsResp[0].name : 'N/D';
+                            
+                            const fbs = allFeedbacks.filter(f => f.uploaded_evidence === mostRecentUpload.id).sort((a, b) => b.id - a.id);
+                            const statusVal = fbs.length > 0 ? fbs[0].result_type : "En Revisión";
 
-                    if (uploadedEvidenceFeedbacks.length > 0){
-                    uploadedEvidenceStatus = uploadedEvidenceFeedbacks[0].result_type;
+                            modelUploadedEvidencesData.push({
+                                'file_name': mostRecentUpload.file_path ? mostRecentUpload.file_path.split("/").pop() : 'Archivo sin nombre',
+                                'group_responsible': wgName,
+                                'uploaded_at': mostRecentUpload.uploaded_at,
+                                'status': statusVal,
+                                'task_title': task.title
+                            });
+                        }
+
+                        const feedbacksForUpload = allFeedbacks
+                            .filter(f => f.uploaded_evidence === mostRecentUpload.id)
+                            .sort((a, b) => b.id - a.id);
+                        const mostRecentFeedback = feedbacksForUpload[0];
+
+                        if (!mostRecentFeedback) {
+                            isTaskInProgress = true;
+                            areAllReqsApproved = false;
+                        } else if (mostRecentFeedback.result_type === 'REJECT') {
+                            isTaskRejected = true;
+                            areAllReqsApproved = false;
+                        }
+                    }
+
+                    if (areAllReqsApproved) {
+                        chartCompleted++;
+                    } else if (isTaskRejected) {
+                        chartRejected++;
+                    } else if (isTaskInProgress) {
+                        chartInProgress++;
+                    }
+                }
+
+                updateCharts(chartCompleted, chartInProgress, chartRejected);
+
+                if (modelId) {
+                    document.getElementById('widget-completed-tasks-value').innerText = chartCompleted;
+                    document.getElementById('widget-in-review-tasks-value').innerText = chartInProgress;
+                    document.getElementById('widget-pending-tasks-value').innerText = tasksToProcess.length - chartCompleted - chartInProgress - chartRejected;
+
+                    const uploadedContainer = document.getElementById('uploaded-evidences');
+                    uploadedContainer.innerHTML = '';
+
+                    if (modelUploadedEvidencesData.length === 0) {
+                        uploadedContainer.innerHTML = '<div class="empty-state">No se encontraron evidencias subidas.</div>';
                     } else {
-                    uploadedEvidenceStatus = "En Revisión";
-                    }
+                        modelUploadedEvidencesData.sort((a, b) => new Date(b.uploaded_at) - new Date(a.uploaded_at));
+                        
+                        modelUploadedEvidencesData.forEach(ue => {
+                            const card = document.createElement('div');
+                            card.className = 'branch-card';
 
-                    const ueData = {
-                    'file_name': ue.file_path ? ue.file_path.split("/").pop() : 'Archivo sin nombre',
-                    'group_responsible': workGroupResponsible ? workGroupResponsible.name : 'N/D',
-                    'uploaded_at': ue.uploaded_at,
-                    'status': uploadedEvidenceStatus,
-                    'task_title': task.title
-                    };
+                            const title = document.createElement('div');
+                            title.className = 'branch-card-title';
+                            title.innerText = ue.file_name || 'Archivo sin nombre';
 
-                    console.log("UEData -> ", ueData);
-                    modelUploadedEvidencesData.push(ueData);
-                    }
+                            const meta = document.createElement('div');
+                            meta.className = 'branch-card-meta';
+                            meta.innerHTML = `
+                                <div>${ue.task_title || ''}</div>
+                                <div>Grupo: ${ue.group_responsible || 'N/D'}</div>
+                                <div>${ue.uploaded_at ? new Date(ue.uploaded_at).toLocaleString('es-ES', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}</div>
+                            `;
 
-                    const mostRecentUpload = allUploadedEvidencesForThisReq[0];
+                            const statusBadge = document.createElement('div');
+                            statusBadge.className = 'evidence-status';                        
 
-                    if (!mostRecentUpload) {
-                    return { hasUpload: false, hasFeedback: false, isApproved: false };
-                    }
-
-                    const feedbacksForUpload = allFeedbacks
-                    .filter(f => f.uploaded_evidence === mostRecentUpload.id)
-                    .sort((a, b) => b.id - a.id);
-
-                    const mostRecentFeedback = feedbacksForUpload[0];
-
-                    return {
-                    hasUpload: true,
-                    hasFeedback: !!mostRecentFeedback,
-                    isApproved: mostRecentFeedback ? mostRecentFeedback.result_type === 'APPROVE' : false
-                    };
-                    }));
-
-                    const hasAtLeastOneInReview = evidencesStatus.some(status => status.hasUpload && !status.hasFeedback);
-                    const areAllApproved = evidencesStatus.every(status => status.hasUpload && status.hasFeedback && status.isApproved);
-
-                    if (areAllApproved) {
-                    completedTasks++;
-                    } else if (hasAtLeastOneInReview) {
-                    reviewTasks++;
-                    }
-                }
-
-                // Calcular las pendientes (el resto de las tareas del modelo)
-                const totalTasksCount = modelTasks.length;
-                const pendingTasks = totalTasksCount - completedTasks - reviewTasks;
-
-                // Inyectar los valores en tus widgets
-                document.getElementById('widget-number-criteria-value').innerText = criteriaData.length;
-                document.getElementById('widget-completed-tasks-value').innerText = completedTasks;
-                document.getElementById('widget-in-review-tasks-value').innerText = reviewTasks;
-                document.getElementById('widget-pending-tasks-value').innerText = pendingTasks;
-                
-                const completedTasksPercentage = (
-                    totalTasksCount > 0
-                    ? +((completedTasks / totalTasksCount) * 100).toFixed(2)
-                    : 0
-                );
-                document.getElementById('general-progress-value').innerText = (
-                    `${completedTasksPercentage}%`
-                );
-                // Apply color based on percentage
-                const el = document.getElementById('general-progress-value');
-                el.classList.remove('progress-red','progress-yellow','progress-green','progress-blue');
-                if (completedTasksPercentage === 100) {
-                    el.classList.add('progress-blue');
-                } else if (completedTasksPercentage >= 80) {
-                    el.classList.add('progress-green');
-                } else if (completedTasksPercentage >= 50) {
-                    el.classList.add('progress-yellow');
-                } else {
-                    el.classList.add('progress-red');
-                }
-                document.getElementById('general-progress-tasks-completed').innerText = (
-                    `${completedTasks} de ${totalTasksCount} tareas completadas.`
-                );
-                
-                // Pintar la Lista de Evidencias subidas (Fila Derecha)
-                modelUploadedEvidencesData.sort((a, b) => b.uploaded_at - a.uploaded_at);
-
-                const uploadedContainer = document.getElementById('uploaded-evidences');
-                uploadedContainer.innerHTML = '';
-
-                if (modelUploadedEvidencesData.length === 0) {
-                    uploadedContainer.innerHTML = '<div class="empty-state">No se encontraron evidencias subidas.</div>';
-                } else {
-                    modelUploadedEvidencesData.sort((a, b) => new Date(b.uploaded_at) - new Date(a.uploaded_at));
-
-                    modelUploadedEvidencesData.forEach(ue => {
-                        const card = document.createElement('div');
-                        card.className = 'branch-card';
-
-                        const title = document.createElement('div');
-                        title.className = 'branch-card-title';
-                        title.innerText = ue.file_name || 'Archivo sin nombre';
-
-                        const meta = document.createElement('div');
-                        meta.className = 'branch-card-meta';
-
-                        const taskLine = document.createElement('div');
-                        taskLine.innerText = ue.task_title || '';
-
-                        const groupLine = document.createElement('div');
-                        const groupName = ue.group_responsible || 'N/D';
-                        groupLine.innerText = 'Grupo: ' + groupName;
-
-                        const dateLine = document.createElement('div');
-                        const uploadedDate = ue.uploaded_at 
-                        ? new Date(ue.uploaded_at).toLocaleString(
-                            'es-ES', { 
-                                day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+                            if (ue.status == 'APPROVE') {
+                                statusBadge.classList.add('approved');
+                                statusBadge.innerText = "Aprobada";
+                            } else if (ue.status == 'REJECT') {
+                                statusBadge.classList.add('rejected');
+                                statusBadge.innerText = "Rechazada";
+                            } else if (ue.status == 'En Revisión') {
+                                statusBadge.classList.add('in-review');
+                                statusBadge.innerText = "En Revisión";
+                            } else {
+                                statusBadge.classList.add('unknown');
+                                statusBadge.innerText = "Desconocida";
                             }
-                        ) 
-                        : '-';
-                        dateLine.innerText = uploadedDate;
 
-                        meta.appendChild(taskLine);
-                        meta.appendChild(groupLine);
-                        meta.appendChild(dateLine);
-
-                        const statusBadge = document.createElement('div');
-                        statusBadge.className = 'evidence-status';                        
-
-                        if (ue.status == 'APPROVE') {
-                            statusBadge.classList.add('approved');
-                            statusBadge.innerText = "Aprobada";
-                        }
-                        else if (ue.status == 'REJECT') {
-                            statusBadge.classList.add('rejected');
-                            statusBadge.innerText = "Rechazada";
-                        }
-                        else if (ue.status == 'En Revisión') {
-                            statusBadge.classList.add('in-review');
-                            statusBadge.innerText = "En Revisión";
-                        }
-                        else {
-                            statusBadge.classList.add('unknown');
-                            statusBadge.innerText = "Desconocida";
-                        }
-
-                        card.appendChild(title);
-                        card.appendChild(meta);
-                        card.appendChild(statusBadge);
-
-                        uploadedContainer.appendChild(card);
-                    });                    
+                            card.appendChild(title);
+                            card.appendChild(meta);
+                            card.appendChild(statusBadge);
+                            uploadedContainer.appendChild(card);
+                        });
+                    }
                 }
-                console.log("Dashboard rellenado sin errores!")
-            } 
-            catch (err) {
+                
+            } catch (err) {
                 console.error("Error renderizando el dashboard dinámico:", err);
             }
         }
