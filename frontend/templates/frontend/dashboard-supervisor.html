@@ -1,0 +1,256 @@
+{% extends "frontend/base.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'frontend/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'frontend/dashboard-supervisor.css' %}">
+
+<div class="dashboard-page">
+    <aside class="dashboard-sidebar">
+        <div class="sidebar-brand">
+            <img src="{% static 'frontend/svgs/certificate.svg'%}" width="32" height="32">
+            <div class="brand-text">
+                <div class="brand-title">CertiPro</div>
+                <div class="brand-subtitle">Gestión de Certificaciones</div>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="#" class="sidebar-link active" onclick="event.preventDefault();">
+                <span>
+                    <img src="{% static 'frontend/svgs/dashboard.svg' %}" width="22" height="22">
+                </span>
+                <span>Panel Principal</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-panel">
+                <div id="sidebar-user-avatar" class="user-avatar"></div>
+                <div class="user-info">
+                    <div id="sidebar-user-name" class="user-name"></div>
+                    <div id="sidebar-user-role" class="user-role"></div>
+                </div>
+            </div>
+            <a href="#" id="log-out" class="sign-out">Cerrar Sesión</a>
+        </div>
+    </aside>
+
+    <main class="dashboard-main">
+        <header class="dashboard-header">
+            <div class="search-box">
+                <span>
+                    <img src="{% static 'frontend/svgs/search.svg' %}" width="22" height="22">
+                </span>
+                <input type="text" placeholder="Buscar criterios, tareas..." />
+            </div>
+            <div class="header-user">
+                <div id="header-user-name" class="header-user-name"></div>
+                <div id="header-user-role" class="header-user-role"></div>
+            </div>
+        </header>
+
+        <section class="dashboard-content">
+            <div class="my-panel-header">
+                <h1>Mi Panel</h1>
+                <p>Visualiza tus tareas asignadas y sube evidencias.</p>
+            </div>
+
+            <div class="dashboard-widgets widgets-3-cols">
+                <div class="widget-card">
+                    <div>
+                        <div class="widget-title">Tareas Asignadas</div>
+                        <div class="widget-value">-</div>
+                    </div>
+                    <div class="widget-icon">
+                        <img src="{% static 'frontend/svgs/task.svg'%}" width="48" height="48">
+                    </div>
+                </div>
+
+                <div class="widget-card">
+                    <div>
+                        <div class="widget-title">Completadas</div>
+                        <div class="widget-value">-</div>
+                    </div>
+                    <div class="widget-icon">
+                        <img src="{% static 'frontend/svgs/done.svg'%}" width="48" height="48">
+                    </div>
+                </div>
+
+                <div class="widget-card">
+                    <div>
+                        <div class="widget-title">Pendientes</div>
+                        <div class="widget-value">-</div>
+                    </div>
+                    <div class="widget-icon">
+                        <img src="{% static 'frontend/svgs/pending.svg'%}" width="48" height="48">
+                    </div>
+                </div>
+            </div>
+
+            <div class="my-tasks">
+                <div class="tasks-header">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <img src="{% static 'frontend/svgs/task.svg'%}" width="32" height="32">
+                        <h2>Mis Tareas</h2>
+                    </div>
+                </div>
+                
+                <div class="tasks-list">
+                    <!-- Las tareas se cargarán aquí mediante JavaScript -->
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", async () => {
+        const accessToken = localStorage.getItem('access_token');
+        const userMetadataStr = localStorage.getItem('user_metadata');
+
+        if (!accessToken || !userMetadataStr) {
+            localStorage.clear();
+            window.location.href = "{% url 'select_profile' %}";
+            return;
+        }
+
+        const user = JSON.parse(userMetadataStr);
+
+        // Generar las iniciales del avatar
+        const names = user.username.trim().split(" ");
+        const initials = names.length > 1 
+        ? (names[0][0] + names[names.length - 1][0]).toUpperCase()
+        : names[0][0].toUpperCase();
+
+        document.getElementById('sidebar-user-avatar').innerText = initials;
+        document.getElementById('sidebar-user-name').innerText = user.username;
+        document.getElementById('sidebar-user-role').innerText = user.role;
+
+        document.getElementById('header-user-name').innerText = user.username;
+        document.getElementById('header-user-role').innerText = user.role;
+
+        document.getElementById('log-out').addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.clear();
+            window.location.href = "{% url 'select_profile' %}";
+        });
+
+        const widgetValues = document.querySelectorAll('.widget-card .widget-value');
+        console.assert(widgetValues.length === 3);
+
+        let currentUser = await API_UTILS.get_filter_by_column(
+            "/users/", "username", user.username
+        );
+        currentUser = currentUser.length > 0 ? currentUser[0] : null;
+        
+        const currentUserWorkgroup = await API_UTILS.get_filter_by_column(
+            "/work_group_members/", "user", currentUser.id
+        );
+        
+        const userTasks = [];
+        for (const workgroup of currentUserWorkgroup) {
+            const workgroupTasks = await API_UTILS.get_filter_by_column(
+                "/tasks/", "group_responsible", workgroup.workgroup
+            );
+            userTasks.push(...workgroupTasks);
+        }
+        widgetValues[0].innerText = userTasks.length;
+        
+        let completedCount = 0;
+        let pendingCount = 0;
+
+        let uploadedEvidencesOfTask = {};
+        for (const task of userTasks) {
+            const evidences = await API_UTILS.get_filter_by_column(
+                "/uploaded_evidences/", "task", task.id
+            );
+            for (let evidence of evidences) {
+                const feedbacks = await API_UTILS.get_filter_by_column(
+                    "/feedbacks/", "uploaded_evidence_id", evidence.id
+                );
+                evidence.feedbacks = feedbacks;
+                evidence.is_approved = feedbacks.every(feedback => feedback.result_type === "APPROVED");
+            }
+            uploadedEvidencesOfTask[task.id] = evidences;
+
+            if (evidences.length > 0 && evidences.every(evidence => evidence.is_approved)) {
+                completedCount++;
+            } else {
+                pendingCount++;
+            }
+        }
+        widgetValues[1].innerText = completedCount;
+        widgetValues[2].innerText = pendingCount;
+
+        let criterionOfTask = {};
+        for (const task of userTasks) {
+            const criteria = await API_UTILS.get_filter_by_column(
+                "/criteria/", "id", task.criterion
+            );
+            criterionOfTask[task.id] = criteria;
+        }
+
+        const taskListsContainer = document.querySelector('.tasks-list');
+        taskListsContainer.innerHTML = '';
+        for (const task of userTasks) {
+            const deadline = new Date(task.end_date).toLocaleDateString('es-ES', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+            });
+            let statusText = 'Pendiente';
+            let statusClass = 'task-status-pending';
+            if (uploadedEvidencesOfTask[task.id].length > 0) {
+                const allApproved = uploadedEvidencesOfTask[task.id].every(evidence => evidence.is_approved);
+                if (allApproved) {
+                    statusText = 'Aceptado';
+                    statusClass = 'task-status-accepted';
+                } else {
+                    statusText = 'En Revisión';
+                    statusClass = 'task-status-in-progress';
+                }                
+            }
+            const criterion = criterionOfTask[task.id].length > 0
+                ? criterionOfTask[task.id][0].code
+                : "Unknown Criterion";
+
+            const taskCard = document.createElement('div');
+            taskCard.classList.add('task-card');
+            taskCard.innerHTML = `
+                <div class="task-card-header">
+                    <div class="task-code">${criterion}</div>
+                    <div class="${statusClass}">${statusText}</div>
+                </div>
+                <div class="task-title">
+                    ${task.title}
+                </div>
+                <div class="task-description">
+                    ${task.description}
+                </div>
+                <div class="task-footer">
+                    <div class="task-deadline">
+                        <img src="{% static 'frontend/svgs/date.svg'%}" width="16" height="16">
+                        <span>Vence: ${deadline}</span>
+                    </div>
+                    <button class="task-upload-btn">
+                        <img src="{% static 'frontend/svgs/upload.svg'%}" width="22" height="22">
+                        <span>Subir evidencia</span>
+                    </button>
+                </div>
+            `;
+            taskListsContainer.appendChild(taskCard);
+        }
+
+        const taskUploadButtons = document.querySelectorAll('.task-upload-btn');
+        taskUploadButtons.forEach((button, index) => {
+            button.addEventListener('click', () => {
+                const task = userTasks[index];
+                localStorage.setItem('selected_task_id', task.id);
+                window.location.href = "{% url 'upload_evidence' %}";
+            });
+        });
+    });
+</script>
+
+{% endblock %}

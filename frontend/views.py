@@ -30,6 +30,9 @@ def dashboard(request):
 def dashboard_member(request):
     return render(request, "frontend/dashboard-member.html", {'api_url': api_url})
 
+def dashboard_supervisor(request):
+    return render(request, "frontend/dashboard-supervisor.html", {'api_url': api_url})
+
 def certification_models(request):
     return render(request, "frontend/certification-models.html", {'api_url': api_url})
 
