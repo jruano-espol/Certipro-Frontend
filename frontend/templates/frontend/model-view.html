@@ -3,6 +3,7 @@
 
 {% block content %}
 <link rel="stylesheet" href="{% static 'frontend/style.css' %}">
+<link rel="stylesheet" href="{% static 'frontend/dashboard.css' %}">
 <link rel="stylesheet" href="{% static 'frontend/model-view.css' %}">
 
 <div class="model-view-wrapper">
@@ -31,6 +32,51 @@
     </div>
 </div>
 
+<div id="criteria-modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="criteria-modal-title">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 id="criteria-modal-title">Agregar Criterio</h3>
+            <button type="button" id="criteria-modal-close" class="modal-close-button" aria-label="Cerrar">×</button>
+        </div>
+        <div class="modal-description" id="criteria-modal-description">Define el código, título y descripción del nuevo criterio.</div>
+        <form id="criteria-form-modal" class="modal-form">
+            <div class="modal-fields">
+                <div class="modal-field">
+                    <span>Prioridad <span style="color: #d32f2f;">*</span></span>
+                    <select name="priority" style="width: 100%; padding: 12px 14px; border: 1px solid #dce4ee; border-radius: 14px; background: #fff; color: #0f1724; font-size: 14px;">
+                        <option value="Baja">Baja</option>
+                        <option value="Media">Media</option>
+                        <option value="Alta">Alta</option>
+                    </select>
+                </div>
+
+                <div class="modal-field">
+                    <span>Código <span style="color: #d32f2f;">*</span></span>
+                    <input type="text" name="code" placeholder="Ej. ISO-9001-4.3" required>
+                </div>
+
+                <div class="modal-field">
+                    <span>Título <span style="color: #d32f2f;">*</span></span>
+                    <input type="text" name="title" placeholder="Ej. Alcance del Sistema" required>
+                </div>
+
+                <div class="modal-field">
+                    <span>Descripción</span>
+                    <textarea name="description" placeholder="Describe el criterio..." style="width: 100%; padding: 12px 14px; border: 1px solid #dce4ee; border-radius: 14px; background: #fff; color: #0f1724; font-size: 14px; font-family: inherit; min-height: 100px; resize: vertical;"></textarea>
+                </div>
+
+                <div class="modal-field">
+                    <span>Modelos a los que pertenece este criterio</span>
+                    <div id="criteria-checkbox-group" style="display: flex; flex-direction: column; gap: 10px; margin-top: 4px;"></div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="submit" id="criteria-submit-btn" class="modal-submit-button">Agregar Criterio</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const accessToken = localStorage.getItem('access_token');
@@ -53,8 +99,103 @@
     });
 
     const addCriterionBtn = document.getElementById('add-criterion-btn');
-    addCriterionBtn.addEventListener('click', () => {
-        window.location.href = "{% url 'add_criteria' %}";
+    const criteriaModalOverlay = document.getElementById('criteria-modal-overlay');
+    const criteriaModalClose = document.getElementById('criteria-modal-close');
+    const criteriaFormModal = document.getElementById('criteria-form-modal');
+    const criteriaModalTitle = document.getElementById('criteria-modal-title');
+    const criteriaModalDescription = document.getElementById('criteria-modal-description');
+    const criteriaCheckboxGroup = document.getElementById('criteria-checkbox-group');
+    const criteriaSubmitBtn = document.getElementById('criteria-submit-btn');
+    const accessToken = localStorage.getItem('access_token');
+    let selectedParentCriteria = null;
+    let selectedModelId = localStorage.getItem('selected_model_id');
+
+    async function openCriteriaModal(parentCriteria = null) {
+        selectedParentCriteria = parentCriteria;
+        criteriaCheckboxGroup.innerHTML = '';
+        criteriaFormModal.reset();
+
+        if (parentCriteria) {
+            criteriaModalTitle.textContent = `Agregar Subcriterio a ${parentCriteria.code}`;
+            criteriaModalDescription.textContent = `Agregar un subcriterio bajo ${parentCriteria.title}.`;
+        } else {
+            criteriaModalTitle.textContent = 'Agregar Criterio';
+            criteriaModalDescription.textContent = 'Define el código, título y descripción del nuevo criterio.';
+        }
+
+        const allModels = await API_UTILS.get("/certification_models/");
+        for (const model of allModels) {
+            const checkboxItem = document.createElement('div');
+            checkboxItem.style.cssText = 'display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #dce4ee; border-radius: 10px; background: rgba(15, 23, 36, 0.02);';
+            
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = `criteria-modelo-${model.id}`;
+            checkbox.name = 'modelos';
+            checkbox.value = model.id;
+            checkbox.style.cssText = 'width: 16px; height: 16px; accent-color: #0b3b66; cursor: pointer;';
+
+            const label = document.createElement('label');
+            label.htmlFor = `criteria-modelo-${model.id}`;
+            label.style.cssText = 'cursor: pointer; margin: 0; font-size: 14px; color: #0f1724;';
+            label.textContent = `${model.title} - ${model.accreditor}`;
+
+            checkboxItem.appendChild(checkbox);
+            checkboxItem.appendChild(label);
+            criteriaCheckboxGroup.appendChild(checkboxItem);
+        }
+
+        criteriaModalOverlay.classList.remove('hidden');
+    }
+
+    function closeCriteriaModal() {
+        criteriaModalOverlay.classList.add('hidden');
+        criteriaFormModal.reset();
+        selectedParentCriteria = null;
+    }
+
+    addCriterionBtn.addEventListener('click', async () => {
+        await openCriteriaModal();
+    });
+
+    criteriaModalClose.addEventListener('click', closeCriteriaModal);
+    criteriaModalOverlay.addEventListener('click', (event) => {
+        if (event.target === event.currentTarget) closeCriteriaModal();
+    });
+
+    criteriaFormModal.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const formData = new FormData(criteriaFormModal);
+
+        const modelIDs = formData.getAll('modelos');
+        const sharedValues = {
+            parent: selectedParentCriteria ? selectedParentCriteria.id : null,
+            priority: formData.get('priority'),
+            code: formData.get('code'),
+            title: formData.get('title'),
+            description: formData.get('description'),
+        };
+
+        try {
+            criteriaSubmitBtn.disabled = true;
+            criteriaSubmitBtn.innerText = 'Agregando...';
+
+            for (const modelID of modelIDs) {
+                const criteria = {
+                    certification_model: modelID,
+                    ...sharedValues,
+                }
+                await API_UTILS.post("/criteria/", criteria);
+            }
+            closeCriteriaModal();
+            await loadModelCriteria();
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Ocurrió un error al agregar el criterio.');
+        } finally {
+            criteriaSubmitBtn.disabled = false;
+            criteriaSubmitBtn.innerText = 'Agregar Criterio';
+        }
     });
 
     async function loadModelCriteria() {
