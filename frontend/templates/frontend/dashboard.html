@@ -218,7 +218,7 @@
             pieChart = new Chart(ctxPie, {
                 type: 'pie',
                 data: {
-                    labels: ['Completadas', 'En Progreso', 'Rechazadas'],
+                    labels: ['Completadas', 'En Progreso', 'Pendientes'],
                     datasets: [{ data: [0, 0, 0], backgroundColor: bgColors }]
                 },
                 options: {
@@ -249,7 +249,7 @@
             barChart = new Chart(ctxBar, {
                 type: 'bar',
                 data: {
-                    labels: ['Completadas', 'En Progreso', 'Rechazadas'],
+                    labels: ['Completadas', 'En Progreso', 'Pendientes'],
                     datasets: [{ data: [0, 0, 0], backgroundColor: bgColors }]
                 },
                 options: {
@@ -368,6 +368,7 @@
 
                         if (!mostRecentUpload) {
                             areAllReqsApproved = false;
+                            isTaskRejected = true;
                             continue;
                         }
 
@@ -395,7 +396,7 @@
                         if (!mostRecentFeedback) {
                             isTaskInProgress = true;
                             areAllReqsApproved = false;
-                        } else if (mostRecentFeedback.result_type === 'REJECT') {
+                        } else if (mostRecentFeedback.result_type == 'REJECT') {
                             isTaskRejected = true;
                             areAllReqsApproved = false;
                         }
@@ -415,7 +416,7 @@
                 if (modelId) {
                     document.getElementById('widget-completed-tasks-value').innerText = chartCompleted;
                     document.getElementById('widget-in-review-tasks-value').innerText = chartInProgress;
-                    document.getElementById('widget-pending-tasks-value').innerText = tasksToProcess.length - chartCompleted - chartInProgress - chartRejected;
+                    document.getElementById('widget-pending-tasks-value').innerText = tasksToProcess.length - chartCompleted - chartInProgress;
 
                     const uploadedContainer = document.getElementById('uploaded-evidences');
                     uploadedContainer.innerHTML = '';
