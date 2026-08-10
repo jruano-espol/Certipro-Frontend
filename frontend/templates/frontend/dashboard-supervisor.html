@@ -53,7 +53,7 @@
         <section class="dashboard-content">
             <div class="my-panel-header">
                 <h1>Mi Panel</h1>
-                <p>Visualiza tus tareas asignadas y sube evidencias.</p>
+                <p>Visualiza las tareas asignadas a tus grupos subordinados.</p>
             </div>
 
             <div class="dashboard-widgets widgets-3-cols">
@@ -92,7 +92,7 @@
                 <div class="tasks-header">
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <img src="{% static 'frontend/svgs/task.svg'%}" width="32" height="32">
-                        <h2>Mis Tareas</h2>
+                        <h2>Tareas de Mis Grupos</h2>
                     </div>
                 </div>
                 
@@ -108,6 +108,7 @@
     document.addEventListener("DOMContentLoaded", async () => {
         const accessToken = localStorage.getItem('access_token');
         const userMetadataStr = localStorage.getItem('user_metadata');
+        console.log(userMetadataStr);
 
         if (!accessToken || !userMetadataStr) {
             localStorage.clear();
@@ -140,18 +141,81 @@
         console.assert(widgetValues.length === 3);
 
         let currentUser = await API_UTILS.get_filter_by_column(
-            "/users/", "username", user.username
+            "/users/", "email", user.email
         );
         currentUser = currentUser.length > 0 ? currentUser[0] : null;
         
-        const currentUserWorkgroup = await API_UTILS.get_filter_by_column(
-            "/work_group_members/", "user", currentUser.id
-        );
+        let workGroupsIdsToProcess = [];
+
+        // Filtering subordinate branches, departments and workgroups
+        const workGroupsSet = new Set();
+
+        try {
+            // 1. Lanzamos las tres consultas iniciales AL MISMO TIEMPO (Parallel Fetching)
+            const [supervisedBranches, supervisedDepartments, directWorkGroups] = await Promise.all([
+                API_UTILS.get_filter_by_column("/branches/", "supervisor", currentUser.id),
+                API_UTILS.get_filter_by_column("/departments/", "supervisor", currentUser.id),
+                API_UTILS.get_filter_by_column("/work_groups/", "supervisor", currentUser.id)
+            ]);
+
+            // --- REGLA 3: Agregar grupos supervisados DIRECTAMENTE ---
+            if (directWorkGroups && directWorkGroups.length > 0) {
+                directWorkGroups.forEach(wg => workGroupsSet.add(wg.id));
+            }
+
+            // Usaremos un Set intermedio para recolectar todos los IDs de departamentos a revisar
+            const departmentsToProcess = new Set();
+
+            // --- REGLA 2: Recolectar departamentos supervisados DIRECTAMENTE ---
+            if (supervisedDepartments && supervisedDepartments.length > 0) {
+                supervisedDepartments.forEach(dept => departmentsToProcess.add(dept.id));
+            }
+
+            // --- REGLA 1: Recolectar departamentos que pertenezcan a las RAMAS supervisadas ---
+            if (supervisedBranches && supervisedBranches.length > 0) {
+                // Creamos un array de promesas para buscar los departamentos de cada rama
+                const branchDeptPromises = supervisedBranches.map(branch =>
+                    API_UTILS.get_filter_by_column("/departments/", "branch_id", branch.id)
+                );
+
+                // Ejecutamos todas las búsquedas de departamentos en paralelo
+                const branchDepartmentsResponses = await Promise.all(branchDeptPromises);
+
+                branchDepartmentsResponses.forEach(deptArray => {
+                    if (deptArray && deptArray.length > 0) {
+                        deptArray.forEach(dept => departmentsToProcess.add(dept.id));
+                    }
+                });
+            }
+
+            // --- PASO FINAL: Buscar los WorkGroups de todos los departamentos recolectados ---
+            if (departmentsToProcess.size > 0) {
+                const deptWorkGroupPromises = Array.from(departmentsToProcess).map(deptId =>
+                    API_UTILS.get_filter_by_column("/work_groups/", "department_id", deptId)
+                );
+
+                const deptWorkGroupsResponses = await Promise.all(deptWorkGroupPromises);
+
+                deptWorkGroupsResponses.forEach(wgArray => {
+                    if (wgArray && wgArray.length > 0) {
+                        wgArray.forEach(wg => workGroupsSet.add(wg.id));
+                    }
+                });
+            }
+
+            // Convertimos el Set de vuelta al array final que necesitas
+            workGroupsIdsToProcess = Array.from(workGroupsSet);
+
+            console.log("IDs de WorkGroups listos para procesar:", workGroupsIdsToProcess);
+
+        } catch (error) {
+            console.error("Error consolidando la jerarquía de WorkGroups:", error);
+        }
         
         const userTasks = [];
-        for (const workgroup of currentUserWorkgroup) {
+        for (const workgroup of workGroupsIdsToProcess) {
             const workgroupTasks = await API_UTILS.get_filter_by_column(
-                "/tasks/", "group_responsible", workgroup.workgroup
+                "/tasks/", "group_responsible", workgroup
             );
             userTasks.push(...workgroupTasks);
         }
