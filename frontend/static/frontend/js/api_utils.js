@@ -1,24 +1,30 @@
-
 const API_UTILS = {
     baseUrl: window.API_BASE_URL,
     
-    get_headers() {
+    get_headers(isFormData = false) {
         const accessToken = localStorage.getItem('access_token');
-        return { 'Authorization': `Bearer ${accessToken}` }
+        const headers = { 'Authorization': `Bearer ${accessToken}` };
+        
+        // Si es FormData, NO debemos colocar 'Content-Type', 
+        // el navegador se encarga de poner el boundary automáticamente.
+        if (!isFormData) {
+            headers['Content-Type'] = 'application/json';
+        }
+        return headers;
     },
 
     async fetch(endpoint, method, body = null) {
         try {
+            const isFormData = body instanceof FormData;
+
             console.log(
-                `Attempting ${method} fetch at: ${endpoint} ${body ? `\nWith: ${JSON.stringify(body)}` : ''}`
+                `Attempting ${method} fetch at: ${endpoint} ${body ? `\nWith: ${isFormData ? '[FormData File/Data]' : JSON.stringify(body)}` : ''}`
             );            
+
             const response = await fetch(`${this.baseUrl}${endpoint}`, {
                 method: method,
-                headers: {
-                    ...this.get_headers(),
-                    'Content-Type': 'application/json'
-                },
-                body: body ? JSON.stringify(body) : null
+                headers: this.get_headers(isFormData),
+                body: body ? (isFormData ? body : JSON.stringify(body)) : null
             });
 
             // Si hay error de autenticación (Token expirado), redirigir al login
@@ -28,7 +34,12 @@ const API_UTILS = {
                 return null;
             }
 
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            if (!response.ok) {
+                // Capturar el error detallado que devuelva Django para depurar mejor
+                const errorBody = await response.text();
+                console.error("Detalle del error del servidor:", errorBody);
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
 
             const response_json = await response.json();
             console.log(`SUCCESFUL\nResponse: ${JSON.stringify(response_json)}`);

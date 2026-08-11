@@ -325,14 +325,43 @@
             if (event.target === event.currentTarget) closeEvidenceModal();
         });
 
-        evidenceFormModal.addEventListener('submit', (e) => {
-            e.preventDefault();
-            if (selectedTaskForEvidence) {
-                localStorage.setItem('selected_task_id', selectedTaskForEvidence.id);
-                // TODO: Implement evidence submission logic
-                alert('Funcionalidad de envío de evidencia aún no implementada.');
-                closeEvidenceModal();
-            }
+        evidenceFormModal.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!selectedTaskForEvidence) return;
+
+        const file = fileInputModal.files[0];
+        if (!file) {
+        alert('Por favor selecciona un archivo antes de enviar.');
+        return;
+        }
+
+        const formData = new FormData();
+        formData.append('file_path', file);
+        formData.append('task', selectedTaskForEvidence.id);
+
+        const selectedRequiredEvidenceId = selectedTaskForEvidence.required_evidence || 1; 
+        formData.append('required_evidence', selectedRequiredEvidenceId);
+
+        try {
+        evidenceSubmitBtn.disabled = true;
+        
+        const response = await API_UTILS.post("/uploaded_evidences/", formData);
+        console.log(response);
+        if (response) {
+        alert('¡Evidencia subida con éxito!');
+        closeEvidenceModal();
+        location.reload(); // Recarga para actualizar el estado en el dashboard
+        } else {
+        const errorData = await response.json();
+        console.error('Error del servidor:', errorData);
+        alert('Hubo un error al subir el archivo. Revisa la consola.');
+        }
+        } catch (error) {
+        console.error('Error de red:', error);
+        alert('Error de conexión con el servidor.');
+        } finally {
+        evidenceSubmitBtn.disabled = false;
+        }
         });
     });
 </script>
