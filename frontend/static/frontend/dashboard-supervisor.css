@@ -113,6 +113,51 @@
     transition: background 0.2s ease;
 }
 
+.task-upload-btn-disabled {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border: none;
+    border-radius: 10px;
+    background: #eae9e9;
+    color: #716f6f;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Montserrat';
+    transition: background 0.2s ease;
+}
+
+.approve-evidence-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border: none;
+    border-radius: 10px;
+    background: #00ad03;
+    color: #ffffff;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Montserrat';
+    transition: background 0.2s ease;
+}
+
+.reject-evidence-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border: none;
+    border-radius: 10px;
+    background: #980000;
+    color: #ffffff;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Montserrat';
+    transition: background 0.2s ease;
+}
+
 .task-upload-btn img {
     display: block;
 }

@@ -1,0 +1,294 @@
+{% extends "frontend/base.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'frontend/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'frontend/dashboard-supervisor.css' %}">
+
+<div class="dashboard-page">
+    <aside class="dashboard-sidebar">
+        <div class="sidebar-brand">
+            <img src="{% static 'frontend/svgs/certificate.svg'%}" width="32" height="32">
+            <div class="brand-text">
+                <div class="brand-title">CertiPro</div>
+                <div class="brand-subtitle">Gestión de Certificaciones</div>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="#" class="sidebar-link active" onclick="event.preventDefault();">
+                <span>
+                    <img src="{% static 'frontend/svgs/dashboard.svg' %}" width="22" height="22">
+                </span>
+                <span>Panel Principal</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-panel">
+                <div id="sidebar-user-avatar" class="user-avatar"></div>
+                <div class="user-info">
+                    <div id="sidebar-user-name" class="user-name"></div>
+                    <div id="sidebar-user-role" class="user-role"></div>
+                </div>
+            </div>
+            <a href="#" id="log-out" class="sign-out">Cerrar Sesión</a>
+        </div>
+    </aside>
+
+    <main class="dashboard-main">
+        <header class="dashboard-header">
+            <div class="search-box">
+                <span>
+                    <img src="{% static 'frontend/svgs/search.svg' %}" width="22" height="22">
+                </span>
+                <input type="text" placeholder="Buscar criterios, tareas..." />
+            </div>
+            <div class="header-user">
+                <div id="header-user-name" class="header-user-name"></div>
+                <div id="header-user-role" class="header-user-role"></div>
+            </div>
+        </header>
+
+        <section class="dashboard-content">
+            <a id="back-button" aria-label="Volver">
+                <!-- left arrow icon -->
+                <svg viewBox="0 0 20 20" fill="none" width="18" height="18" aria-hidden="true">
+                    <path d="M11 15L6 10l5-5" stroke="#3b4854" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Volver a la Tarea
+            </a>
+            <div class="my-panel-header">
+                <h1 id="uploaded-evidence-title">Evidencia: </h1>
+                <h2 id="task-title">Tarea: </h1>
+                <h2 id="group-responsible-name">Grupo Responsable: </h2>
+                <p>Revisa y aprueba o rechaza la evidencia subida.</p>
+            </div>
+
+            <div class="my-tasks">
+                <div class="tasks-header">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <h2>Ver Evidencia</h2>
+                        <button id="download-evidence-button" class="task-upload-btn">
+                            <img src="{% static 'frontend/svgs/download.png'%}" width="22" height="22">
+                            Descargar
+                        </button>
+                        <button id="open-evidence-button" class="task-upload-btn">
+                            <img src="{% static 'frontend/svgs/open-file.png'%}" width="22" height="22">
+                            Abrir Archivo
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="my-tasks">
+                <div class="modal-field">
+                    <span>Notas Adicionales</span>
+                    <textarea id="feedback-notes" placeholder="Escribe aquí..." style="width: 100%; min-height: 100px; padding: 12px 14px; border: 1px solid #dce4ee; border-radius: 14px; background: #fff; color: #0f1724; font-size: 14px; font-family: inherit; resize: vertical;"></textarea>
+                </div>
+                <button id="approve-button" class="approve-evidence-button">
+                    <span>Aprobar</span>
+                </button>
+                <button id="reject-button" class="reject-evidence-button">
+                    <span>Rechazar</span>
+                </button>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", async () => {
+        const accessToken = localStorage.getItem('access_token');
+        const userMetadataStr = localStorage.getItem('user_metadata');
+
+        if (!accessToken || !userMetadataStr) {
+            localStorage.clear();
+            window.location.href = "{% url 'select_profile' %}";
+            return;
+        }
+
+        const selectedUploadedEvidenceId = localStorage.getItem('selected_uploaded_evidence_id');
+        const selectedUploadedEvidenceResponse = await API_UTILS.get_filter_by_column(
+            "/uploaded_evidences/", "id", selectedUploadedEvidenceId
+        );
+        const selectedUploadedEvidence = selectedUploadedEvidenceResponse[0];
+        document.getElementById('uploaded-evidence-title').innerText = `Evidencia: ${selectedUploadedEvidence.original_filename}`;
+
+        const selectedTaskId = localStorage.getItem('selected_task_id');
+        const selectedTaskResponse = await API_UTILS.get_filter_by_column(
+            "/tasks/", "id", selectedTaskId
+        );
+        const selectedTask = selectedTaskResponse[0];
+        document.getElementById('task-title').innerText = `Tarea: ${selectedTask.title}`;
+
+        const groupResponsibleResponse = await API_UTILS.get_filter_by_column(
+            "/work_groups/", "id", selectedTask.group_responsible
+        );
+        const groupResponsible = groupResponsibleResponse[0];
+        document.getElementById('group-responsible-name').innerText = `Grupo Responsable: ${groupResponsible.name}`;
+
+        console.log(selectedTask.requirement_version);
+
+        const user = JSON.parse(userMetadataStr);
+
+        // Generar las iniciales del avatar
+        const names = user.username.trim().split(" ");
+        const initials = names.length > 1 
+        ? (names[0][0] + names[names.length - 1][0]).toUpperCase()
+        : names[0][0].toUpperCase();
+
+        document.getElementById('sidebar-user-avatar').innerText = initials;
+        document.getElementById('sidebar-user-name').innerText = user.username;
+        document.getElementById('sidebar-user-role').innerText = user.role;
+
+        document.getElementById('header-user-name').innerText = user.username;
+        document.getElementById('header-user-role').innerText = user.role;
+
+        document.getElementById('log-out').addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.clear();
+            window.location.href = "{% url 'select_profile' %}";
+        });
+
+        let currentUser = await API_UTILS.get_filter_by_column(
+            "/users/", "email", user.email
+        );
+        currentUser = currentUser.length > 0 ? currentUser[0] : null;
+
+        const downloadFileButton = document.getElementById('download-evidence-button');
+        const openFileButton = document.getElementById('open-evidence-button');
+        
+        const fileUrl = selectedUploadedEvidence.file_url;
+        const originalName = selectedUploadedEvidence.original_filename;
+
+        downloadFileButton.addEventListener('click', async () => {
+        try {
+            console.log("Descargando desde:", fileUrl);
+
+            // 1. Pide el archivo al servidor de Supabase como un flujo de datos (Blob)
+            const response = await fetch(fileUrl);
+            if (!response.ok) throw new Error('No se pudo descargar el archivo.');
+
+            const blob = await response.blob();
+
+            // 2. Crea una URL local temporal que apunta al blob (esto engaña al navegador haciéndole creer que es del mismo origen)
+            const blobUrl = window.URL.createObjectURL(blob);
+
+            // 3. Crea el enlace temporal de forma invisible
+            const tempLink = document.createElement('a');
+            tempLink.href = blobUrl;
+            tempLink.download = originalName; // ¡Aquí el navegador SÍ respeta el nombre original porque el blob es local!
+
+            document.body.appendChild(tempLink);
+            tempLink.click();
+
+            // 4. Limpia los recursos creados
+            document.body.removeChild(tempLink);
+            window.URL.revokeObjectURL(blobUrl);
+
+        } catch (error) {
+            console.error("Error en la descarga:", error);
+            // Plan de respaldo por si falla el fetch (ej. políticas CORS estrictas en Supabase): abrir en pestaña nueva
+            window.open(fileUrl, '_blank');
+        }
+        });
+
+        openFileButton.addEventListener('click', async () => {
+        try {
+            console.log("Descargando desde:", fileUrl);
+
+            // 1. Pide el archivo al servidor de Supabase como un flujo de datos (Blob)
+            const response = await fetch(fileUrl);
+            if (!response.ok) throw new Error('No se pudo descargar el archivo.');
+
+            const blob = await response.blob();
+
+            // 2. Crea una URL local temporal que apunta al blob (esto engaña al navegador haciéndole creer que es del mismo origen)
+            const blobUrl = window.URL.createObjectURL(blob);
+
+            // 3. Crea el enlace temporal de forma invisible
+            const tempLink = document.createElement('a');
+            tempLink.href = blobUrl;
+
+            document.body.appendChild(tempLink);
+            tempLink.click();
+
+            // 4. Limpia los recursos creados
+            document.body.removeChild(tempLink);
+            window.URL.revokeObjectURL(blobUrl);
+
+        } catch (error) {
+            console.error("Error en la descarga:", error);
+            // Plan de respaldo por si falla el fetch (ej. políticas CORS estrictas en Supabase): abrir en pestaña nueva
+            window.open(fileUrl, '_blank');
+        }
+        });
+        
+        const backButton = document.getElementById('back-button');
+        backButton.addEventListener('click', () => {
+            localStorage.removeItem('selected_uploaded_evidence_id');
+            history.back();
+        });
+
+        const approveButton = document.getElementById('approve-button');
+        const rejectButton = document.getElementById('reject-button');
+
+        approveButton.addEventListener('click', async () => {
+            try{
+                let feedbackNotes = document.getElementById('feedback-notes').value.trim();
+
+                if(feedbackNotes == ""){
+                    feedbackNotes = "Aprobada."
+                }
+
+                const body = {
+                    "comment": feedbackNotes,
+                    "result_type": "APPROVE",
+                    "evaluator": currentUser.id,
+                    "uploaded_evidence": selectedUploadedEvidenceId
+                };
+
+                API_UTILS.post(
+                    "/feedbacks/", body
+                );
+                alert("¡Evidencia aprobada exitósamente!")
+                location.reload();
+            }catch (error) {
+                console.error("Error al aprobar la evidencia.", error);
+                alert("Error al aprobar la evidencia.");
+                throw error;
+            }
+        });
+
+        rejectButton.addEventListener('click', async () => {
+            try{
+                let feedbackNotes = document.getElementById('feedback-notes').value.trim();
+
+                if(feedbackNotes == ""){
+                    alert("Para las evidencias rechazadas, es obligatorio escribir notas adicionales.");
+                    return;
+                }
+
+                const body = {
+                    "comment": feedbackNotes,
+                    "result_type": "REJECT",
+                    "evaluator": currentUser.id,
+                    "uploaded_evidence": selectedUploadedEvidenceId
+                };
+
+                API_UTILS.post(
+                    "/feedbacks/", body
+                );
+
+                alert("¡Evidencia rechazada exitósamente!")
+                location.reload();
+            }catch (error) {
+                console.error("Error al rechazar la evidencia.", error);
+                alert("Error al rechazar la evidencia.");
+                throw error;
+            }
+        });
+    });
+</script>
+
+{% endblock %}

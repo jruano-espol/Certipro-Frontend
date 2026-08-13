@@ -51,6 +51,12 @@ def add_criteria(request):
 def upload_evidence(request):
     return render(request, "frontend/upload-evidence.html", {'api_url': api_url})
 
+def review_task(request):
+    return render(request, "frontend/review-task.html", {'api_url': api_url})
+
+def review_uploaded_evidence(request):
+    return render(request, "frontend/review-uploaded-evidence.html", {'api_url': api_url})
+
 def tareas(request):
     return render(request, "frontend/tareas.html", {'api_url': api_url})
 

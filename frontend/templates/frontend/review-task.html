@@ -1,0 +1,196 @@
+{% extends "frontend/base.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'frontend/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'frontend/dashboard-supervisor.css' %}">
+
+<div class="dashboard-page">
+    <aside class="dashboard-sidebar">
+        <div class="sidebar-brand">
+            <img src="{% static 'frontend/svgs/certificate.svg'%}" width="32" height="32">
+            <div class="brand-text">
+                <div class="brand-title">CertiPro</div>
+                <div class="brand-subtitle">Gestión de Certificaciones</div>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="#" class="sidebar-link active" onclick="event.preventDefault();">
+                <span>
+                    <img src="{% static 'frontend/svgs/dashboard.svg' %}" width="22" height="22">
+                </span>
+                <span>Panel Principal</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-panel">
+                <div id="sidebar-user-avatar" class="user-avatar"></div>
+                <div class="user-info">
+                    <div id="sidebar-user-name" class="user-name"></div>
+                    <div id="sidebar-user-role" class="user-role"></div>
+                </div>
+            </div>
+            <a href="#" id="log-out" class="sign-out">Cerrar Sesión</a>
+        </div>
+    </aside>
+
+    <main class="dashboard-main">
+        <header class="dashboard-header">
+            <div class="search-box">
+                <span>
+                    <img src="{% static 'frontend/svgs/search.svg' %}" width="22" height="22">
+                </span>
+                <input type="text" placeholder="Buscar criterios, tareas..." />
+            </div>
+            <div class="header-user">
+                <div id="header-user-name" class="header-user-name"></div>
+                <div id="header-user-role" class="header-user-role"></div>
+            </div>
+        </header>
+
+        <section class="dashboard-content">
+            <a id="back-button" aria-label="Volver">
+                <!-- left arrow icon -->
+                <svg viewBox="0 0 20 20" fill="none" width="18" height="18" aria-hidden="true">
+                    <path d="M11 15L6 10l5-5" stroke="#3b4854" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Volver al Panel Principal
+            </a>
+            <div class="my-panel-header">
+                <h1 id="task-title">Tarea: </h1>
+                <h2 id="group-responsible-name">Grupo Responsable: </h2>
+                <p>Visualiza las evidencias subidas a esta tarea.</p>
+            </div>
+
+            <div class="my-tasks">
+                <div class="tasks-header">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <img src="{% static 'frontend/svgs/task.svg'%}" width="32" height="32">
+                        <h2>Evidencias Requeridas</h2>
+                    </div>
+                </div>
+                
+                <div id='required-evidences-list' class="tasks-list">
+                    <!-- Las evidencias se cargarán aquí mediante JavaScript -->
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", async () => {
+        const accessToken = localStorage.getItem('access_token');
+        const userMetadataStr = localStorage.getItem('user_metadata');
+
+        if (!accessToken || !userMetadataStr) {
+            localStorage.clear();
+            window.location.href = "{% url 'select_profile' %}";
+            return;
+        }
+        const selectedTaskId = localStorage.getItem('selected_task_id');
+        const selectedTaskResponse = await API_UTILS.get_filter_by_column(
+            "/tasks/", "id", selectedTaskId
+        );
+        const selectedTask = selectedTaskResponse[0];
+        document.getElementById('task-title').innerText = `Tarea: ${selectedTask.title}`;
+
+        const groupResponsibleResponse = await API_UTILS.get_filter_by_column(
+            "/work_groups/", "id", selectedTask.group_responsible
+        );
+        const groupResponsible = groupResponsibleResponse[0];
+        document.getElementById('group-responsible-name').innerText = `Grupo Responsable: ${groupResponsible.name}`;
+
+        console.log(selectedTask.requirement_version);
+
+        const user = JSON.parse(userMetadataStr);
+
+        // Generar las iniciales del avatar
+        const names = user.username.trim().split(" ");
+        const initials = names.length > 1 
+        ? (names[0][0] + names[names.length - 1][0]).toUpperCase()
+        : names[0][0].toUpperCase();
+
+        document.getElementById('sidebar-user-avatar').innerText = initials;
+        document.getElementById('sidebar-user-name').innerText = user.username;
+        document.getElementById('sidebar-user-role').innerText = user.role;
+
+        document.getElementById('header-user-name').innerText = user.username;
+        document.getElementById('header-user-role').innerText = user.role;
+
+        document.getElementById('log-out').addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.clear();
+            window.location.href = "{% url 'select_profile' %}";
+        });
+
+        let currentUser = await API_UTILS.get_filter_by_column(
+            "/users/", "email", user.email
+        );
+        currentUser = currentUser.length > 0 ? currentUser[0] : null;
+
+        const requiredEvidencesList = document.getElementById('required-evidences-list');
+
+        const requirementVersionResponse = await API_UTILS.get_filter_by_column(
+            "/requirement_versions/", "id", selectedTask.requirement_version
+        );
+        const requirementVersion = requirementVersionResponse[0];
+        const requiredEvidences = await API_UTILS.get_filter_by_column(
+            "/required_evidences/", "requirement_version", requirementVersion.id
+        );
+
+        for (re of requiredEvidences){
+            let requiredEvidenceCard = document.createElement("div"); 
+
+            const uploadedEvidences = await API_UTILS.get_filter_by_column(
+                "/uploaded_evidences/", "required_evidence", re.id 
+            );
+
+            const latestUploadedEvidence = uploadedEvidences[0];
+
+            requiredEvidenceCard.classList.add('task-card');
+            requiredEvidenceCard.innerHTML = `
+                <div class="task-card-header">
+                    <div class="task-code">${re.title}</div>
+                </div>
+                <div class="task-title">
+                    ${re.file_type}
+                </div>
+                <div class="task-description">
+                    ${re.description}
+                </div>
+                <div class="task-footer">
+                    <button id="review-uploaded-evidence-button" class="task-upload-btn">
+                        <span>Revisar Última Evidencia</span>
+                    </button>
+                </div>
+            `;
+            
+            requiredEvidencesList.appendChild(requiredEvidenceCard);
+
+            const evidenceReviewButton = document.getElementById('review-uploaded-evidence-button');
+            
+            if (latestUploadedEvidence) {
+                evidenceReviewButton.addEventListener('click', () => {
+                    localStorage.setItem('selected_uploaded_evidence_id', latestUploadedEvidence.id);
+                    window.location.href = "{% url 'review_uploaded_evidence' %}";
+                });
+            }
+            else{
+                evidenceReviewButton.classList = 'task-upload-btn-disabled';
+            }
+        }
+
+        
+        
+        const backButton = document.getElementById('back-button');
+        backButton.addEventListener('click', () => {
+            localStorage.removeItem('selected_task_id');
+            history.back();
+        });
+    });
+</script>
+
+{% endblock %}

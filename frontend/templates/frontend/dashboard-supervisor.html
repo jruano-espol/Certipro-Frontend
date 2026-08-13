@@ -298,20 +298,19 @@
                         <span>Vence: ${deadline}</span>
                     </div>
                     <button class="task-upload-btn">
-                        <img src="{% static 'frontend/svgs/upload.svg'%}" width="22" height="22">
-                        <span>Subir evidencia</span>
+                        <span>Revisar Evidencias </span>
                     </button>
                 </div>
             `;
             taskListsContainer.appendChild(taskCard);
         }
 
-        const taskUploadButtons = document.querySelectorAll('.task-upload-btn');
-        taskUploadButtons.forEach((button, index) => {
+        const taskReviewButton = document.querySelectorAll('.task-upload-btn');
+        taskReviewButton.forEach((button, index) => {
             button.addEventListener('click', () => {
                 const task = userTasks[index];
                 localStorage.setItem('selected_task_id', task.id);
-                window.location.href = "{% url 'upload_evidence' %}";
+                window.location.href = "{% url 'review_task' %}";
             });
         });
     });
