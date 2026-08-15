@@ -24,6 +24,9 @@ def login(request):
 
     return render(request, "frontend/login.html", context)
 
+def signup(request):
+    return render(request, "frontend/signup.html", {'api_url': api_url})
+
 def dashboard(request):
     return render(request, "frontend/dashboard.html", {'api_url': api_url})
 

@@ -2,7 +2,7 @@ main {
   width: 680px;
 }
 
-.login {
+.signup {
   width: 420px;
   margin: 0 auto;
 }
@@ -21,7 +21,7 @@ main {
 
 /* title area */
 .title {
-  margin:  10px 0 40px 0;
+  margin: 10px 0 30px 0;
 }
 .title h1 {
   margin: 0;
@@ -31,7 +31,7 @@ main {
   color: var(--text);
 }
 .subtitle {
-  margin-top: 15px;
+  margin: 5px 0;
   color: var(--muted);
   font-size: 14px;
 }
