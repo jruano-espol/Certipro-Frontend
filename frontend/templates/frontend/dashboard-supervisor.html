@@ -72,18 +72,17 @@
                         <div class="widget-title">Completadas</div>
                         <div class="widget-value">-</div>
                     </div>
-                    <div class="widget-icon">
-                        <img src="{% static 'frontend/svgs/done.svg'%}" width="48" height="48">
+                </div>
+                <div class="widget-card">
+                    <div>
+                        <div class="widget-title">En Revisión</div>
+                        <div class="widget-value">-</div>
                     </div>
                 </div>
-
                 <div class="widget-card">
                     <div>
                         <div class="widget-title">Pendientes</div>
                         <div class="widget-value">-</div>
-                    </div>
-                    <div class="widget-icon">
-                        <img src="{% static 'frontend/svgs/pending.svg'%}" width="48" height="48">
                     </div>
                 </div>
             </div>
@@ -138,7 +137,7 @@
         });
 
         const widgetValues = document.querySelectorAll('.widget-card .widget-value');
-        console.assert(widgetValues.length === 3);
+        console.assert(widgetValues.length === 4);
 
         let currentUser = await API_UTILS.get_filter_by_column(
             "/users/", "email", user.email
@@ -188,7 +187,6 @@
                 });
             }
 
-            // --- PASO FINAL: Buscar los WorkGroups de todos los departamentos recolectados ---
             if (departmentsToProcess.size > 0) {
                 const deptWorkGroupPromises = Array.from(departmentsToProcess).map(deptId =>
                     API_UTILS.get_filter_by_column("/work_groups/", "department_id", deptId)
@@ -203,7 +201,6 @@
                 });
             }
 
-            // Convertimos el Set de vuelta al array final que necesitas
             workGroupsIdsToProcess = Array.from(workGroupsSet);
 
             console.log("IDs de WorkGroups listos para procesar:", workGroupsIdsToProcess);
@@ -223,68 +220,44 @@
         
         let completedCount = 0;
         let pendingCount = 0;
-
-        let uploadedEvidencesOfTask = {};
-        for (const task of userTasks) {
-            const evidences = await API_UTILS.get_filter_by_column(
-                "/uploaded_evidences/", "task", task.id
-            );
-            for (let evidence of evidences) {
-                const feedbacks = await API_UTILS.get_filter_by_column(
-                    "/feedbacks/", "uploaded_evidence_id", evidence.id
-                );
-                evidence.feedbacks = feedbacks;
-                evidence.is_approved = feedbacks.every(feedback => feedback.result_type === "APPROVED");
-            }
-            uploadedEvidencesOfTask[task.id] = evidences;
-
-            if (evidences.length > 0 && evidences.every(evidence => evidence.is_approved)) {
-                completedCount++;
-            } else {
-                pendingCount++;
-            }
-        }
-        widgetValues[1].innerText = completedCount;
-        widgetValues[2].innerText = pendingCount;
-
-        let criterionOfTask = {};
-        for (const task of userTasks) {
-            const criteria = await API_UTILS.get_filter_by_column(
-                "/criteria/", "id", task.criterion
-            );
-            criterionOfTask[task.id] = criteria;
-        }
+        let inProgressCount = 0;
 
         const taskListsContainer = document.querySelector('.tasks-list');
-        taskListsContainer.innerHTML = '';
-        for (const task of userTasks) {
+
+        const categorizedTasks = await API_UTILS.categorize_tasks(userTasks);
+
+        for (const task of categorizedTasks) {
+            let statusClass = "task-status-accepted";
+
+            if (task.status === "Aceptada"){
+                completedCount++;
+            }
+            else if(task.status === "En Revisión"){
+                inProgressCount++;
+                statusClass = "task-status-in-progress";
+            }
+            else{
+                pendingCount++;
+                statusClass = "task-status-pending";
+            }
+
             const deadline = new Date(task.end_date).toLocaleDateString('es-ES', {
                 day: '2-digit',
                 month: 'short',
                 year: 'numeric',
             });
-            let statusText = 'Pendiente';
-            let statusClass = 'task-status-pending';
-            if (uploadedEvidencesOfTask[task.id].length > 0) {
-                const allApproved = uploadedEvidencesOfTask[task.id].every(evidence => evidence.is_approved);
-                if (allApproved) {
-                    statusText = 'Aceptado';
-                    statusClass = 'task-status-accepted';
-                } else {
-                    statusText = 'En Revisión';
-                    statusClass = 'task-status-in-progress';
-                }                
-            }
-            const criterion = criterionOfTask[task.id].length > 0
-                ? criterionOfTask[task.id][0].code
-                : "Unknown Criterion";
 
+            const criterionResponse = await API_UTILS.get_filter_by_column(
+                "/criteria/", "id", task.criterion
+            );
+            const criterion = criterionResponse[0];
+            
             const taskCard = document.createElement('div');
             taskCard.classList.add('task-card');
             taskCard.innerHTML = `
                 <div class="task-card-header">
-                    <div class="task-code">${criterion}</div>
-                    <div class="${statusClass}">${statusText}</div>
+                    <div class="task-code">${criterion.code}</div>
+                    <div class="${statusClass}">${task.status}</div>
                 </div>
                 <div class="task-title">
                     ${task.title}
@@ -304,6 +277,10 @@
             `;
             taskListsContainer.appendChild(taskCard);
         }
+
+        widgetValues[1].innerText = completedCount;
+        widgetValues[2].innerText = inProgressCount;
+        widgetValues[3].innerText = pendingCount;        
 
         const taskReviewButton = document.querySelectorAll('.task-upload-btn');
         taskReviewButton.forEach((button, index) => {

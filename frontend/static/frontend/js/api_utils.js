@@ -73,5 +73,44 @@ const API_UTILS = {
 
     async patch(endpoint, id, body) {
         return await this.fetch(`${endpoint}${id}/`, 'PATCH', body);
+    },
+
+    async categorize_tasks(tasks){        
+        for (const task of tasks) {
+            let status = "Aceptada";
+
+            const requiredEvidences = await API_UTILS.get_filter_by_column(
+                "/required_evidences/", "requirement_version", task.requirement_version
+            );
+
+            for (const requiredEvidence of requiredEvidences){
+                const uploadedEvidences = await API_UTILS.get_filter_by_column(
+                    "/uploaded_evidences/", "required_evidence", requiredEvidence.id
+                );
+                if(uploadedEvidences){
+                    for(const uploadedEvidence of uploadedEvidences){
+                        const feedbacks = await API_UTILS.get_filter_by_column(
+                            "/feedbacks/", "uploaded_evidence", uploadedEvidence.id
+                        );
+
+                        if (feedbacks.length > 0){
+                            if(feedbacks[0].result_type === "REJECT"){
+                                status = "Pendiente";
+                                break;
+                            }
+                        }
+                        else{
+                            status = "En Revisión";
+                        }
+                    }
+                }
+                else{
+                    status = "Pendiente";
+                }
+            }
+
+            task.status = status;
+        }
+        return tasks;
     }
 };
