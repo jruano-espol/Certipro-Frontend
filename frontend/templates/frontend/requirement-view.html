@@ -1,0 +1,451 @@
+{% extends "frontend/base.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'frontend/style.css' %}">
+<link rel="stylesheet" href="{% static 'frontend/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'frontend/model-view.css' %}">
+
+<div class="model-view-wrapper">
+    <a id="back-button" aria-label="Volver">
+        <!-- left arrow icon -->
+        <svg viewBox="0 0 20 20" fill="none" width="18" height="18" aria-hidden="true">
+            <path d="M11 15L6 10l5-5" stroke="#3b4854" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Volver a requerimientos
+    </a>
+
+    <div class="page-shell">
+        <div id="criteria-tree-header">
+            <div id="criteria-tree-title">
+                <img src="{% static 'frontend/svgs/task.svg' %}" width="24" height="24">
+                <h2>Versiones del Requerimiento</h2>
+            </div>
+            <button id="add-version-btn" class="plus-button">
+                <img src="{% static 'frontend/svgs/plus.svg'%}" width="22" height="22">
+                Nueva Versión
+            </button>
+        </div>
+        <div id="versions-container" class="criteria-tree">
+            <!-- Versiones y evidencias requeridas se cargarán aquí -->
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Crear / Editar Versión -->
+<div id="version-modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="version-modal-title">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 id="version-modal-title">Nueva Versión del Requerimiento</h3>
+            <button type="button" id="version-modal-close" class="modal-close-button" aria-label="Cerrar">×</button>
+        </div>
+        <div class="modal-description" id="version-modal-desc">Define el número de la nueva versión.</div>
+        <form id="version-form-modal" class="modal-form">
+            <input type="hidden" id="version-id-input" name="version_id">
+            <div class="modal-fields">
+                <div class="modal-field">
+                    <span>Número de Versión <span style="color: #d32f2f;">*</span></span>
+                    <input type="text" id="version-number-input" name="version_number" placeholder="Ej. v1.0.0" required>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="submit" id="version-submit-btn" class="modal-submit-button">Crear Versión</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal para Crear / Editar Evidencia Requerida -->
+<div id="evidence-modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="evidence-modal-title">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 id="evidence-modal-title">Nueva Evidencia Requerida</h3>
+            <button type="button" id="evidence-modal-close" class="modal-close-button" aria-label="Cerrar">×</button>
+        </div>
+        <div class="modal-description" id="evidence-modal-desc">Completa los datos de la evidencia requerida.</div>
+        <form id="evidence-form-modal" class="modal-form">
+            <input type="hidden" id="evidence-id-input" name="evidence_id">
+            <input type="hidden" id="evidence-version-id-input" name="evidence_version_id">
+            <div class="modal-fields">
+                <div class="modal-field">
+                    <span>Título <span style="color: #d32f2f;">*</span></span>
+                    <input type="text" id="evidence-title-input" name="title" placeholder="Ej. Diagrama de Arquitectura" required>
+                </div>
+                <div class="modal-field">
+                    <span>Tipo de Archivo <span style="color: #d32f2f;">*</span></span>
+                    <input type="text" id="evidence-file-type-input" name="file_type" placeholder="Ej. .pdf, .png, .docx" required>
+                </div>
+                <div class="modal-field">
+                    <span>Descripción</span>
+                    <textarea id="evidence-description-input" name="description" placeholder="Descripción detallada de la evidencia..." rows="3" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit;"></textarea>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="submit" id="evidence-submit-btn" class="modal-submit-button">Crear Evidencia</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const accessToken = localStorage.getItem('access_token');
+        const userMetadataStr = localStorage.getItem('user_metadata');
+
+        if (!accessToken || !userMetadataStr) {
+            localStorage.clear();
+            window.location.href = "{% url 'select_profile' %}";
+            return;
+        }
+
+        const backButton = document.getElementById('back-button');
+        backButton.addEventListener('click', () => {
+            localStorage.removeItem('selected_requirement_id');
+            history.back();
+        });
+
+        loadRequirementVersions();
+    });
+
+    const addVersionBtn = document.getElementById('add-version-btn');
+    const versionModalOverlay = document.getElementById('version-modal-overlay');
+    const versionModalClose = document.getElementById('version-modal-close');
+    const versionFormModal = document.getElementById('version-form-modal');
+    const versionSubmitBtn = document.getElementById('version-submit-btn');
+    const versionModalTitle = document.getElementById('version-modal-title');
+    const versionModalDesc = document.getElementById('version-modal-desc');
+    const versionIdInput = document.getElementById('version-id-input');
+    const versionNumberInput = document.getElementById('version-number-input');
+
+    // Modals de Evidencia Requerida
+    const evidenceModalOverlay = document.getElementById('evidence-modal-overlay');
+    const evidenceModalClose = document.getElementById('evidence-modal-close');
+    const evidenceFormModal = document.getElementById('evidence-form-modal');
+    const evidenceSubmitBtn = document.getElementById('evidence-submit-btn');
+    const evidenceModalTitle = document.getElementById('evidence-modal-title');
+    const evidenceModalDesc = document.getElementById('evidence-modal-desc');
+    const evidenceIdInput = document.getElementById('evidence-id-input');
+    const evidenceVersionIdInput = document.getElementById('evidence-version-id-input');
+    const evidenceTitleInput = document.getElementById('evidence-title-input');
+    const evidenceFileTypeInput = document.getElementById('evidence-file-type-input');
+    const evidenceDescriptionInput = document.getElementById('evidence-description-input');
+
+    let selectedRequirementId = localStorage.getItem('selected_requirement_id');
+
+    addVersionBtn.addEventListener('click', () => {
+        versionFormModal.reset();
+        versionIdInput.value = '';
+        versionModalTitle.innerText = 'Nueva Versión del Requerimiento';
+        versionModalDesc.innerText = 'Define el número de la nueva versión.';
+        versionSubmitBtn.innerText = 'Crear Versión';
+        versionModalOverlay.classList.remove('hidden');
+    });
+
+    versionModalClose.addEventListener('click', () => {
+        versionModalOverlay.classList.add('hidden');
+    });
+
+    versionModalOverlay.addEventListener('click', (event) => {
+        if (event.target === event.currentTarget) {
+            versionModalOverlay.classList.add('hidden');
+        }
+    });
+
+    versionFormModal.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const versionId = versionIdInput.value;
+        const versionNumber = versionNumberInput.value;
+
+        try {
+            versionSubmitBtn.disabled = true;
+            versionSubmitBtn.innerText = versionId ? 'Guardando...' : 'Creando...';
+
+            if (versionId) {
+                await API_UTILS.patch("/requirement_versions/", parseInt(versionId), {
+                    version_number: versionNumber
+                });
+            } else {
+                await API_UTILS.post("/requirement_versions/", {
+                    requirement: parseInt(selectedRequirementId),
+                    version_number: versionNumber,
+                    is_active: false
+                });
+            }
+
+            versionModalOverlay.classList.add('hidden');
+            await loadRequirementVersions();
+        } catch (error) {
+            console.error('Error al guardar versión:', error);
+            alert('Ocurrió un error al procesar la versión del requerimiento.');
+        } finally {
+            versionSubmitBtn.disabled = false;
+            versionSubmitBtn.innerText = versionId ? 'Guardar Cambios' : 'Crear Versión';
+        }
+    });
+
+    // Eventos del modal de evidencia requerida
+    evidenceModalClose.addEventListener('click', () => {
+        evidenceModalOverlay.classList.add('hidden');
+    });
+
+    evidenceModalOverlay.addEventListener('click', (event) => {
+        if (event.target === event.currentTarget) {
+            evidenceModalOverlay.classList.add('hidden');
+        }
+    });
+
+    evidenceFormModal.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const evidenceId = evidenceIdInput.value;
+        const versionId = evidenceVersionIdInput.value;
+        const title = evidenceTitleInput.value;
+        const fileType = evidenceFileTypeInput.value;
+        const description = evidenceDescriptionInput.value;
+
+        try {
+            evidenceSubmitBtn.disabled = true;
+            evidenceSubmitBtn.innerText = evidenceId ? 'Guardando...' : 'Creando...';
+
+            if (evidenceId) {
+                await API_UTILS.patch("/required_evidences/", parseInt(evidenceId), {
+                    title: title,
+                    file_type: fileType,
+                    description: description
+                });
+            } else {
+                await API_UTILS.post("/required_evidences/", {
+                    requirement_version: parseInt(versionId),
+                    title: title,
+                    file_type: fileType,
+                    description: description
+                });
+            }
+
+            evidenceModalOverlay.classList.add('hidden');
+            await loadRequirementVersions();
+        } catch (error) {
+            console.error('Error al guardar evidencia requerida:', error);
+            alert('Ocurrió un error al procesar la evidencia requerida.');
+        } finally {
+            evidenceSubmitBtn.disabled = false;
+            evidenceSubmitBtn.innerText = evidenceId ? 'Guardar Cambios' : 'Crear Evidencia';
+        }
+    });
+
+    async function loadRequirementVersions() {
+        if (!selectedRequirementId) {
+            console.error('No requirement ID found');
+            return;
+        }
+
+        const versions = await API_UTILS.get_filter_by_column(
+            "/requirement_versions/",
+            "requirement",
+            selectedRequirementId
+        );
+
+        const container = document.getElementById('versions-container');
+        container.innerHTML = '';
+
+        if (!versions || versions.length === 0) {
+            container.innerHTML = '<div class="models-empty" style="padding: 20px; text-align: center;">No hay versiones registradas para este requerimiento.</div>';
+            return;
+        }
+
+        for (const version of versions) {
+            const element = await buildVersionElement(version, versions);
+            container.appendChild(element);
+        }
+    }
+
+    async function buildVersionElement(version, allVersions) {
+        const div = document.createElement('div');
+        div.className = 'criterion-item';
+
+        const requiredEvidences = await API_UTILS.get_filter_by_column(
+            "/required_evidences/",
+            "requirement_version",
+            version.id
+        );
+
+        let categorizedEvidences = await API_UTILS.categorize_required_evidences(requiredEvidences);
+        const hasChildren = categorizedEvidences.length > 0;
+
+        let html = '<div class="criterion-header">';
+
+        // Botón colapsar / placeholder
+        html += `
+            <button class="collapse-btn" aria-expanded="true" aria-label="Expandir/contraer">
+                ▼
+            </button>
+        `;
+
+        const isActive = version.is_active;
+        const statusClass = isActive ? 'evidence-status approved' : 'evidence-status rejected';
+        const statusText = isActive ? 'Activo' : 'Inactivo';
+
+        html += `
+            <span class="criterion-name">Versión: ${version.version_number}</span>
+            <span class="${statusClass}">${statusText}</span>
+            <div class="criterion-actions" style="display: flex; align-items: center; gap: 8px;">
+                <button class="plus-button set-active-btn" ${isActive ? 'disabled style="opacity: 0.6; cursor: not-allowed;"' : ''} title="Establecer como Activa">
+                    Establecer como Activa
+                </button>
+                <button class="action-btn edit-btn" title="Editar Versión">
+                    <img src="{% static 'frontend/svgs/edit.svg' %}" width="16" height="16">
+                </button>
+                <button class="action-btn delete-btn" title="Eliminar Versión">
+                    <img src="{% static 'frontend/svgs/trash.svg' %}" width="16" height="16">
+                </button>
+                <button class="plus-button add-subcriteria-button" title="Añadir Evidencia Requerida">
+                    <img src="{% static 'frontend/svgs/plus.svg' %}" width="18" height="18">
+                </button>
+            </div>
+        </div>
+        `;
+
+        html += '<div class="subcriteria-container" style="display: block;"></div>';
+
+        div.innerHTML = html;
+
+        // Botón Activar
+        const setActiveBtn = div.querySelector('.set-active-btn');
+        if (setActiveBtn) {
+            setActiveBtn.addEventListener('click', async () => {
+                try {
+                    const allButtons = document.querySelectorAll('.set-active-btn');
+                    allButtons.forEach(btn => btn.disabled = true);
+
+                    for (const v of allVersions) {
+                        const shouldBeActive = (v.id === version.id);
+                        if (v.is_active !== shouldBeActive) {
+                            await API_UTILS.patch("/requirement_versions/", v.id, { is_active: shouldBeActive });
+                        }
+                    }
+
+                    await loadRequirementVersions();
+                } catch (error) {
+                    console.error('Error al actualizar la versión activa:', error);
+                    alert('Ocurrió un error al cambiar la versión activa.');
+                    await loadRequirementVersions();
+                }
+            });
+        }
+
+        // Botón Editar Versión
+        const editBtn = div.querySelector('.edit-btn');
+        editBtn.addEventListener('click', () => {
+            versionIdInput.value = version.id;
+            versionNumberInput.value = version.version_number;
+            versionModalTitle.innerText = 'Editar Versión del Requerimiento';
+            versionModalDesc.innerText = 'Modifica el número de la versión.';
+            versionSubmitBtn.innerText = 'Guardar Cambios';
+            versionModalOverlay.classList.remove('hidden');
+        });
+
+        // Botón Eliminar Versión
+        const deleteBtn = div.querySelector('.delete-btn');
+        deleteBtn.addEventListener('click', async () => {
+            if (confirm(`¿Estás seguro de eliminar la versión ${version.version_number}? Se eliminarán TAMBIÉN todas las evidencias subidas a esta versión.`)) {
+                try {
+                    await API_UTILS.delete("/requirement_versions/", version.id);
+                    await loadRequirementVersions();
+                } catch (error) {
+                    console.error('Error al eliminar la versión:', error);
+                    alert('Ocurrió un error al intentar eliminar la versión.');
+                }
+            }
+        });
+
+        // Botón Añadir Evidencia Requerida
+        const addEvidenceBtn = div.querySelector('.add-subcriteria-button');
+        addEvidenceBtn.addEventListener('click', () => {
+            evidenceFormModal.reset();
+            evidenceIdInput.value = '';
+            evidenceVersionIdInput.value = version.id;
+            evidenceModalTitle.innerText = 'Nueva Evidencia Requerida';
+            evidenceModalDesc.innerText = 'Completa los datos de la evidencia requerida para la versión ' + version.version_number;
+            evidenceSubmitBtn.innerText = 'Crear Evidencia';
+            evidenceModalOverlay.classList.remove('hidden');
+        });
+
+        const collapseBtn = div.querySelector('.collapse-btn');
+        const subcriteriaContainer = div.querySelector('.subcriteria-container');
+
+        collapseBtn.addEventListener('click', () => {
+            const isExpanded = collapseBtn.getAttribute('aria-expanded') === 'true';
+            collapseBtn.setAttribute('aria-expanded', !isExpanded);
+            subcriteriaContainer.style.display = isExpanded ? 'none' : 'block';
+            collapseBtn.textContent = isExpanded ? '▶' : '▼';
+        });
+
+        if (!categorizedEvidences || categorizedEvidences.length === 0) {
+            subcriteriaContainer.innerHTML = '<div style="padding: 12px 16px 12px 40px; font-size: 13px; color: #777;">No hay evidencias requeridas en esta versión.</div>';
+        } else {
+            for (const evidence of categorizedEvidences) {
+                const subElement = document.createElement('div');
+                subElement.className = 'criterion-item subcriteria-item';
+
+                let evStatusClass = 'evidence-status in-review';
+                let evStatusText = evidence.status || 'En Revisión';
+                if (evStatusText === 'Aceptada') {
+                    evStatusClass = 'evidence-status approved';
+                } else if (evStatusText === 'Pendiente') {
+                    evStatusClass = 'evidence-status rejected';
+                }
+
+                subElement.innerHTML = `
+                    <div class="criterion-header" style="width: 100%;">
+                        <div class="collapse-btn-placeholder"></div>
+                        <span class="criterion-name" style="flex: 1;"><strong>${evidence.title}</strong> (${evidence.file_type || 'Archivo'})</span>
+                        <span class="${evStatusClass}">${evStatusText}</span>
+                        <div class="criterion-actions" style="display: flex; align-items: center; gap: 8px; margin-left: 12px;">
+                            <button class="action-btn edit-evidence-btn" title="Editar Evidencia Requerida">
+                                <img src="{% static 'frontend/svgs/edit.svg' %}" width="16" height="16">
+                            </button>
+                            <button class="action-btn delete-evidence-btn" title="Eliminar Evidencia Requerida">
+                                <img src="{% static 'frontend/svgs/trash.svg' %}" width="16" height="16">
+                            </button>
+                        </div>
+                    </div>
+                    <div style="padding: 8px 16px 12px 40px; font-size: 13px; color: #555;">
+                        ${evidence.description || 'Sin descripción'}
+                    </div>
+                `;
+
+                // Botón Editar Evidencia Requerida
+                const editEvidenceBtn = subElement.querySelector('.edit-evidence-btn');
+                editEvidenceBtn.addEventListener('click', () => {
+                    evidenceIdInput.value = evidence.id;
+                    evidenceVersionIdInput.value = version.id;
+                    evidenceTitleInput.value = evidence.title || '';
+                    evidenceFileTypeInput.value = evidence.file_type || '';
+                    evidenceDescriptionInput.value = evidence.description || '';
+                    evidenceModalTitle.innerText = 'Editar Evidencia Requerida';
+                    evidenceModalDesc.innerText = 'Modifica los datos de la evidencia requerida.';
+                    evidenceSubmitBtn.innerText = 'Guardar Cambios';
+                    evidenceModalOverlay.classList.remove('hidden');
+                });
+
+                // Botón Eliminar Evidencia Requerida
+                const deleteEvidenceBtn = subElement.querySelector('.delete-evidence-btn');
+                deleteEvidenceBtn.addEventListener('click', async () => {
+                    if (confirm(`¿Estás seguro de eliminar la evidencia requerida "${evidence.title}"? Se eliminarán también las instancias de evidencias subidas asociadas.`)) {
+                        try {
+                            await API_UTILS.delete("/required_evidences/", evidence.id);
+                            await loadRequirementVersions();
+                        } catch (error) {
+                            console.error('Error al eliminar la evidencia requerida:', error);
+                            alert('Ocurrió un error al intentar eliminar la evidencia requerida.');
+                        }
+                    }
+                });
+
+                subcriteriaContainer.appendChild(subElement);
+            }
+        }
+
+        return div;
+    }
+</script>
+{% endblock %}

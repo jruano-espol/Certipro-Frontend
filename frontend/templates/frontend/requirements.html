@@ -17,27 +17,19 @@
 
         <nav class="sidebar-nav">
             <a href="{% url 'dashboard' %}" class="sidebar-link">
-                <span>
-                    <img src="{% static 'frontend/svgs/dashboard.svg' %}" width="22" height="22">
-                </span>
+                <span><img src="{% static 'frontend/svgs/dashboard.svg' %}" width="22" height="22"></span>
                 <span>Panel Principal</span>
             </a>
             <a href="{% url 'certification_models' %}" class="sidebar-link">
-                <span>
-                    <img src="{% static 'frontend/svgs/medal-star.svg' %}" width="22" height="22">
-                </span>
+                <span><img src="{% static 'frontend/svgs/medal-star.svg' %}" width="22" height="22"></span>
                 <span>Modelos de Certificación</span>
             </a>
             <a href="{% url 'organizational_structure' %}" class="sidebar-link">
-                <span>
-                    <img src="{% static 'frontend/svgs/group.svg' %}" width="22" height="22">
-                </span>
+                <span><img src="{% static 'frontend/svgs/group.svg' %}" width="22" height="22"></span>
                 <span>Estructura Organizacional</span>
             </a>
             <a href="#" class="sidebar-link active" onclick="event.preventDefault();">
-                <span>
-                    <img src="{% static 'frontend/svgs/goal.svg' %}" width="22" height="22">
-                </span>
+                <span><img src="{% static 'frontend/svgs/goal.svg' %}" width="22" height="22"></span>
                 <span>Requerimientos</span>
             </a>
         </nav>
@@ -57,9 +49,7 @@
     <main class="dashboard-main">
         <header class="dashboard-header">
             <div class="search-box">
-                <span>
-                    <img src="{% static 'frontend/svgs/search.svg' %}" width="22" height="22">
-                </span>
+                <span><img src="{% static 'frontend/svgs/search.svg' %}" width="22" height="22"></span>
                 <input type="text" placeholder="Buscar criterios, tareas..." />
             </div>
             <div class="header-user">
@@ -80,8 +70,6 @@
                         Nuevo Requerimiento
                     </button>
                 </div>
-
-                <!-- Grid de cards: se puebla dinámicamente via JS -->
                 <div id="models-grid" class="models-grid"></div>
             </div>
         </section>
@@ -93,16 +81,22 @@
                 <h3 id="modelo-modal-title">Nuevo Requerimiento</h3>
                 <button type="button" id="modelo-modal-close" class="modal-close-button" aria-label="Cerrar">×</button>
             </div>
-            <div class="modal-description">Define los datos del nuevo requerimiento.</div>
             <form id="certification-form" class="modal-form" novalidate>
+                <input type="hidden" id="model-id-input">
                 <div class="modal-fields">
-                    <div class="modal-field">
-                        <span>Título del Requerimiento <span style="color: #d32f2f;">*</span></span>
-                        <input id="model-title" type="text" placeholder="Ej: Política de Seguridad de la Información">
+                    <div class="modal-fields">
+                        <div class="modal-field">
+                            <span>Título del Requerimiento <span style="color: #d32f2f;">*</span></span>
+                            <input id="model-title" type="text" placeholder="Ej: Política de Seguridad" required>
+                        </div>
+                        <div class="modal-field">
+                            <span>Descripción</span>
+                            <textarea id="model-description" placeholder="Breve descripción del requerimiento..." rows="3" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit;"></textarea>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-actions">
-                    <button type="submit" id="modelo-submit-btn" class="modal-submit-button">Crear Requerimiento</button>
+                    <button type="submit" id="modelo-submit-btn" class="modal-submit-button">Guardar</button>
                 </div>
             </form>
         </div>
@@ -135,12 +129,21 @@
                     <div class="model-card-info">
                         <span class="evidence-status ${badgeClass}">${req.status}</span>
                         <h3 class="model-card-title">${req.title}</h3>
+                        <span class="model-card-criteria">${req.description}</span>
                     </div>
                     <span class="model-card-arrow">›</span>
                 </div>
                 <hr class="model-card-divider">
                 <div class="model-card-bottom">
                     <span class="model-card-criteria">${req.evidence_count} evidencias requeridas</span>
+                    <div class="card-actions" style="display: flex; gap: 8px;">
+                        <button class="edit-btn" style="background: none; border: none; cursor: pointer;" title="Editar">
+                            <img src="{% static 'frontend/svgs/edit.svg' %}" width="16" height="16">
+                        </button>
+                        <button class="delete-btn" style="background: none; border: none; cursor: pointer;" title="Eliminar">
+                            <img src="{% static 'frontend/svgs/trash.svg' %}" width="16" height="16">
+                        </button>
+                    </div>
                 </div>
             `;
 
@@ -148,6 +151,25 @@
                 localStorage.setItem('selected_requirement_id', req.id);
                 window.location.href = "{% url 'requirement_view' %}";
             });
+
+            card.querySelector('.edit-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                document.getElementById('model-id-input').value = req.id;
+                document.getElementById('model-title').value = req.title;
+                document.getElementById('model-description').value = req.description || ''; // Agregado
+                document.getElementById('modelo-modal-title').innerText = 'Editar Requerimiento';
+                document.getElementById('modelo-modal-overlay').classList.remove('hidden');
+            });
+
+            // Botón Eliminar
+            card.querySelector('.delete-btn').addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (confirm('¿Estás seguro de eliminar este requerimiento?')) {
+                    await API_UTILS.delete("/requirements/", req.id);
+                    loadRequirements(localStorage.getItem('access_token'));
+                }
+            });
+            
             grid.appendChild(card);
         });
     }
@@ -160,8 +182,6 @@
         try {
             let requirements = await API_UTILS.get("/requirements/");
             requirements = await API_UTILS.categorize_requirements(requirements);
-            console.log("AAAAAAAAAAAAAAAAAAA", requirements);
-
             renderRequirements(requirements);
 
         } catch (err) {
@@ -170,7 +190,6 @@
         }
     }
 
-    // ── Init ────────────────────────────────────────────────────────────────
     document.addEventListener("DOMContentLoaded", async () => {
         const modeloModalOverlay = document.getElementById('modelo-modal-overlay');
         const modeloModalClose = document.getElementById('modelo-modal-close');
@@ -197,41 +216,37 @@
 
         certificationForm.addEventListener('submit', async (event) => {
             event.preventDefault();
-            const modelTitle = document.getElementById('model-title').value.trim();
+            const id = document.getElementById('model-id-input').value;
+            const title = document.getElementById('model-title').value.trim();
+            const description = document.getElementById('model-description').value.trim();
 
-            if (!modelTitle) {
+            if (!title) {
                 alert('Por favor, complete el título del requerimiento.');
                 return;
             }
 
-            const payload = { title: modelTitle };
+            const payload = { title, description };
 
             try {
                 modeloSubmitBtn.disabled = true;
-                modeloSubmitBtn.innerText = 'Creando...';
+                modeloSubmitBtn.innerText = 'Guardando...';
 
-                const response = await fetch("{{api_url}}" + "/requirements/", {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${accessToken}`
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-                if (response.ok) {
-                    closeModeloModal();
-                    await loadRequirements(accessToken);
+                if (id) {
+                    // Caso Edición
+                    await API_UTILS.patch("/requirements/", parseInt(id), payload);
                 } else {
-                    const errorData = await response.json();
-                    alert(`Error al crear el requerimiento: ${errorData.detail || 'Error desconocido'}`);
+                    // Caso Creación
+                    await API_UTILS.post("/requirements/", payload);
                 }
+                
+                closeModeloModal();
+                await loadRequirements(accessToken);
             } catch (error) {
                 console.error('Error:', error);
-                alert('Ocurrió un error al crear el requerimiento.');
+                alert('Ocurrió un error al procesar el requerimiento.');
             } finally {
                 modeloSubmitBtn.disabled = false;
-                modeloSubmitBtn.innerText = 'Crear Requerimiento';
+                modeloSubmitBtn.innerText = 'Guardar';
             }
         });
 

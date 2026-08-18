@@ -143,7 +143,6 @@ const API_UTILS = {
             }
 
             if (latestVersion && latestVersion.is_active){
-                console.log("ENCIENIOERIJBTRNB");
                 const requiredEvidences = await this.get_filter_by_column(
                     "/required_evidences/", "requirement_version", latestVersion.id
                 );
@@ -182,5 +181,40 @@ const API_UTILS = {
             requirement.evidence_count = evidence_count;
         }
         return requirements;
+    },
+
+    async categorize_required_evidences(requiredEvidences){
+        for (requiredEvidence of requiredEvidences){
+            let status = "Desconocido";
+
+            const uploadedEvidences = await this.get_filter_by_column(
+                "/uploaded_evidences/", "required_evidence", requiredEvidence.id
+            );
+            if(uploadedEvidences.length > 0){
+                const latestEvidence = uploadedEvidences[0];
+                status = "Aceptada";
+
+                const feedbacks = await this.get_filter_by_column(
+                    "/feedbacks/", "uploaded_evidence", latestEvidence.id
+                );
+
+                if (feedbacks.length > 0){
+                    if(feedbacks[0].result_type === "REJECT"){
+                        status = "Pendiente";
+                        break;
+                    }
+                }
+                else{
+                    status = "En Revisión";
+                }
+                
+            }
+            else{
+                status = "Pendiente";
+            }
+            requiredEvidence.status = status;
+            requiredEvidence.uploaded_evidences_count = uploadedEvidences.length;
+        }
+        return requiredEvidences;
     }
 };
