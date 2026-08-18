@@ -65,7 +65,7 @@
                     <textarea name="description" placeholder="Describe el criterio..." style="width: 100%; padding: 12px 14px; border: 1px solid #dce4ee; border-radius: 14px; background: #fff; color: #0f1724; font-size: 14px; font-family: inherit; min-height: 100px; resize: vertical;"></textarea>
                 </div>
 
-                <div class="modal-field">
+                <div class="modal-field" id="models-field-container">
                     <span>Modelos a los que pertenece este criterio</span>
                     <div id="criteria-checkbox-group" style="display: flex; flex-direction: column; gap: 10px; margin-top: 4px;"></div>
                 </div>
@@ -105,45 +105,74 @@
     const criteriaModalTitle = document.getElementById('criteria-modal-title');
     const criteriaModalDescription = document.getElementById('criteria-modal-description');
     const criteriaCheckboxGroup = document.getElementById('criteria-checkbox-group');
+    const modelsFieldContainer = document.getElementById('models-field-container');
     const criteriaSubmitBtn = document.getElementById('criteria-submit-btn');
     
     const accessToken = localStorage.getItem('access_token');
     let selectedParentCriteria = null;
+    let editingCriterionId = null; 
     let selectedModelId = localStorage.getItem('selected_model_id');
 
-    async function openCriteriaModal(parentCriteria = null) {
+    async function openCriteriaModal(parentCriteria = null, criterionToEdit = null) {
         selectedParentCriteria = parentCriteria;
+        editingCriterionId = criterionToEdit ? criterionToEdit.id : null;
         criteriaCheckboxGroup.innerHTML = '';
         criteriaFormModal.reset();
 
-        if (parentCriteria) {
+        if (criterionToEdit) {
+            // Modo Edición
+            criteriaModalTitle.textContent = `Editar Criterio: ${criterionToEdit.code}`;
+            criteriaModalDescription.textContent = `Modifica los datos del criterio.`;
+            criteriaSubmitBtn.textContent = 'Guardar Cambios';
+
+            criteriaFormModal.querySelector('[name="priority"]').value = criterionToEdit.priority || 'Baja';
+            criteriaFormModal.querySelector('[name="code"]').value = criterionToEdit.code || '';
+            criteriaFormModal.querySelector('[name="title"]').value = criterionToEdit.title || '';
+            criteriaFormModal.querySelector('[name="description"]').value = criterionToEdit.description || '';
+
+            if (modelsFieldContainer) {
+                modelsFieldContainer.style.display = 'none';
+            }
+        } else if (parentCriteria) {
+            // Modo Subcriterio (Ocultamos selección de modelos ya que hereda el del padre)
             criteriaModalTitle.textContent = `Agregar Subcriterio a ${parentCriteria.code}`;
             criteriaModalDescription.textContent = `Agregar un subcriterio bajo ${parentCriteria.title}.`;
+            criteriaSubmitBtn.textContent = 'Agregar Subcriterio';
+            if (modelsFieldContainer) modelsFieldContainer.style.display = 'none';
         } else {
+            // Modo Crear Criterio Principal
             criteriaModalTitle.textContent = 'Agregar Criterio';
             criteriaModalDescription.textContent = 'Define el código, título y descripción del nuevo criterio.';
-        }
+            criteriaSubmitBtn.textContent = 'Agregar Criterio';
+            if (modelsFieldContainer) {
+                modelsFieldContainer.style.display = 'block';
+                const allModels = await API_UTILS.get("/certification_models/");
+                for (const model of allModels) {
+                    const checkboxItem = document.createElement('div');
+                    checkboxItem.style.cssText = 'display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #dce4ee; border-radius: 10px; background: rgba(15, 23, 36, 0.02);';
+                    
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = `criteria-modelo-${model.id}`;
+                    checkbox.name = 'modelos';
+                    checkbox.value = model.id;
+                    checkbox.style.cssText = 'width: 16px; height: 16px; accent-color: #0b3b66; cursor: pointer;';
 
-        const allModels = await API_UTILS.get("/certification_models/");
-        for (const model of allModels) {
-            const checkboxItem = document.createElement('div');
-            checkboxItem.style.cssText = 'display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #dce4ee; border-radius: 10px; background: rgba(15, 23, 36, 0.02);';
-            
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.id = `criteria-modelo-${model.id}`;
-            checkbox.name = 'modelos';
-            checkbox.value = model.id;
-            checkbox.style.cssText = 'width: 16px; height: 16px; accent-color: #0b3b66; cursor: pointer;';
+                    const label = document.createElement('label');
+                    label.htmlFor = `criteria-modelo-${model.id}`;
+                    label.style.cssText = 'cursor: pointer; margin: 0; font-size: 14px; color: #0f1724;';
+                    label.textContent = `${model.title} - ${model.accreditor}`;
 
-            const label = document.createElement('label');
-            label.htmlFor = `criteria-modelo-${model.id}`;
-            label.style.cssText = 'cursor: pointer; margin: 0; font-size: 14px; color: #0f1724;';
-            label.textContent = `${model.title} - ${model.accreditor}`;
+                    if(model.id == selectedModelId){
+                        checkbox.checked = true;
+                        label.textContent += " (modelo actual)";
+                    }
 
-            checkboxItem.appendChild(checkbox);
-            checkboxItem.appendChild(label);
-            criteriaCheckboxGroup.appendChild(checkboxItem);
+                    checkboxItem.appendChild(checkbox);
+                    checkboxItem.appendChild(label);
+                    criteriaCheckboxGroup.appendChild(checkboxItem);
+                }
+            }
         }
 
         criteriaModalOverlay.classList.remove('hidden');
@@ -153,6 +182,8 @@
         criteriaModalOverlay.classList.add('hidden');
         criteriaFormModal.reset();
         selectedParentCriteria = null;
+        editingCriterionId = null;
+        if (modelsFieldContainer) modelsFieldContainer.style.display = 'block';
     }
 
     addCriterionBtn.addEventListener('click', async () => {
@@ -168,7 +199,6 @@
         event.preventDefault();
         const formData = new FormData(criteriaFormModal);
 
-        const modelIDs = formData.getAll('modelos');
         const sharedValues = {
             parent: selectedParentCriteria ? selectedParentCriteria.id : null,
             priority: formData.get('priority'),
@@ -179,23 +209,37 @@
 
         try {
             criteriaSubmitBtn.disabled = true;
-            criteriaSubmitBtn.innerText = 'Agregando...';
+            criteriaSubmitBtn.innerText = editingCriterionId ? 'Guardando...' : 'Agregando...';
 
-            for (const modelID of modelIDs) {
-                const criteria = {
-                    certification_model: modelID,
+            if (editingCriterionId) {
+                // Actualizar criterio existente vía PATCH
+                await API_UTILS.patch("/criteria/", editingCriterionId, sharedValues);
+            } else if (selectedParentCriteria) {
+                // Crear un subcriterio directamente asociado al modelo actual y al padre
+                const subcriterionData = {
+                    certification_model: parseInt(selectedModelId),
                     ...sharedValues,
+                };
+                await API_UTILS.post("/criteria/", subcriterionData);
+            } else {
+                // Crear nuevos criterios principales seleccionados
+                const modelIDs = formData.getAll('modelos');
+                for (const modelID of modelIDs) {
+                    const criteria = {
+                        certification_model: modelID,
+                        ...sharedValues,
+                    }
+                    await API_UTILS.post("/criteria/", criteria);
                 }
-                await API_UTILS.post("/criteria/", criteria);
             }
             closeCriteriaModal();
             await loadModelCriteria();
         } catch (error) {
             console.error('Error:', error);
-            alert('Ocurrió un error al agregar el criterio.');
+            alert('Ocurrió un error al guardar el criterio.');
         } finally {
             criteriaSubmitBtn.disabled = false;
-            criteriaSubmitBtn.innerText = 'Agregar Criterio';
+            criteriaSubmitBtn.innerText = editingCriterionId ? 'Guardar Cambios' : 'Agregar Criterio';
         }
     });
 
@@ -258,16 +302,16 @@
             <span class="criterion-name">${criterionName}</span>
             <div class="criterion-actions">
                 <span class="task-count">${criteriaTasks.length} tareas</span>
-                <button class="action-btn view-tasks-btn">
+                <button class="action-btn view-tasks-btn" title="Ver tareas">
                     <img src="{% static 'frontend/svgs/task.svg' %}" width="16" height="16">
                 </button>
-                <button class="action-btn edit-btn">
+                <button class="action-btn edit-btn" title="Editar criterio">
                     <img src="{% static 'frontend/svgs/edit.svg' %}" width="16" height="16">
                 </button>
-                <button class="action-btn delete-btn">
+                <button class="action-btn delete-btn" title="Eliminar criterio">
                     <img src="{% static 'frontend/svgs/trash.svg' %}" width="16" height="16">
                 </button>
-                <button class="action-btn add-subcriteria-btn">
+                <button class="action-btn add-subcriteria-btn" title="Agregar subcriterio">
                     <img src="{% static 'frontend/svgs/plus.svg' %}" width="16" height="16">
                 </button>
             </div>
@@ -280,19 +324,44 @@
 
         div.innerHTML = html;
 
+        // Listener para Agregar Subcriterio (Ahora abre el modal pasándole el criterio padre)
         let addSubcriteriaBtn = div.querySelector('.add-subcriteria-btn');
         if (addSubcriteriaBtn) {
             addSubcriteriaBtn.addEventListener('click', () => {
-                localStorage.setItem("selected_criteria_id", criterion.id);
-                window.location.href = "{% url 'add_criteria' %}";
+                openCriteriaModal(criterion);
             });
         }
 
+        // Listener para Ver Tareas
         let viewTasksBtn = div.querySelector('.view-tasks-btn');
         if (viewTasksBtn) {
             viewTasksBtn.addEventListener('click', () => {
                 localStorage.setItem("selected_criteria_id", criterion.id);
                 window.location.href = "{% url 'criteria_tasks' %}";
+            });
+        }
+
+        // Listener para Editar Criterio
+        let editBtn = div.querySelector('.edit-btn');
+        if (editBtn) {
+            editBtn.addEventListener('click', () => {
+                openCriteriaModal(null, criterion);
+            });
+        }
+
+        // Listener para Eliminar Criterio
+        let deleteBtn = div.querySelector('.delete-btn');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', async () => {
+                if (confirm(`¿Estás seguro de que deseas eliminar el criterio "${criterion.code}"?`)) {
+                    try {
+                        await API_UTILS.delete("/criteria/", criterion.id);
+                        await loadModelCriteria();
+                    } catch (error) {
+                        console.error('Error al eliminar:', error);
+                        alert('Ocurrió un error al eliminar el criterio.');
+                    }
+                }
             });
         }
 

@@ -41,6 +41,11 @@ const API_UTILS = {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
+            if (response.status === 204) {
+                console.log(`SUCCESSFUL (No Content)`);
+                return null;
+            }
+
             const response_json = await response.json();
             console.log(`SUCCESFUL\nResponse: ${JSON.stringify(response_json)}`);
 
@@ -73,6 +78,10 @@ const API_UTILS = {
 
     async patch(endpoint, id, body) {
         return await this.fetch(`${endpoint}${id}/`, 'PATCH', body);
+    },
+
+    async delete(endpoint, id){
+        return await this.fetch(`${endpoint}${id}/`, 'DELETE');
     },
 
     async categorize_tasks(tasks){

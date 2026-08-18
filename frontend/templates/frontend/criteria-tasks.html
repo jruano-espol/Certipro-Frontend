@@ -50,10 +50,9 @@
 
                 <div class="modal-field">
                     <span>Descripción</span>
-                    <textarea name="description" placeholder="Describe el criterio..." style="width: 100%; padding: 12px 14px; border: 1px solid #dce4ee; border-radius: 14px; background: #fff; color: #0f1724; font-size: 14px; font-family: inherit; min-height: 100px; resize: vertical;"></textarea>
+                    <textarea name="description" placeholder="Describe la tarea..." style="width: 100%; padding: 12px 14px; border: 1px solid #dce4ee; border-radius: 14px; background: #fff; color: #0f1724; font-size: 14px; font-family: inherit; min-height: 100px; resize: vertical;"></textarea>
                 </div>
 
-                
                 <div class="modal-field">
                     <span>Requerimiento <span style="color: #d32f2f;">*</span></span>
                     <select id="requirement-select" name="requirement-version" style="width: 100%; padding: 12px 14px; border: 1px solid #dce4ee; border-radius: 14px; background: #fff; color: #0f1724; font-size: 14px;">
@@ -94,6 +93,7 @@
             window.location.href = "{% url 'select_profile' %}";
             return;
         }
+
         const backButton = document.getElementById('back-button');
         backButton.addEventListener('click', () => {
             localStorage.removeItem('selected_criteria_id');
@@ -108,76 +108,10 @@
         const tasksTitleText = document.getElementById("tasks-title-text");
         tasksTitleText.textContent += ` ${selectedCriteria.code} "${selectedCriteria.title}"`;
 
-        const criteriaTasks = await API_UTILS.get_filter_by_column(
-            "/tasks/", "criterion", selectedCriteriaID
-        );
-
         const workgroups = await API_UTILS.get("/work_groups/");
-
         const taskList = document.getElementById("task-list");
 
-        function formatDate(dateStr) {
-            if (!dateStr) return "";
-            const date = new Date(dateStr);
-            return date.toLocaleDateString("es-ES", {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric"
-            });
-        }
-
-        if (!criteriaTasks || criteriaTasks.length === 0) {
-            taskList.innerHTML = '<p class="no-tasks">No hay tareas para este criterio.</p>';
-            return;
-        }
-
-        criteriaTasks.forEach(task => {
-            let workgroupOptions = "";
-            for (const workgroup of workgroups) {
-                const selected = workgroup.id === task.group_responsible ? " selected" : "";
-                workgroupOptions += `<option value="${workgroup.id}"${selected}>${workgroup.name}</option>`;
-            }
-            const card = document.createElement("article");
-            card.className = "task-card";
-            card.innerHTML = `
-                <div class="task-card-header">
-                    <h3>${task.title || "Tarea sin título"}</h3>
-                    <form class="task-delegate-form" style="display:flex;gap:10px">
-                        <div class="workgroup-select form-input">
-                            <select name="workgroup">
-                                ${workgroupOptions}
-                            </select>
-                        </div>
-                        <button type="submit" class="btn btn-primary delegate-btn">
-                            Delegar
-                        </button>
-                    </form>
-                    <span class="task-card-dates">
-                        ${formatDate(task.start_date)} &ndash; ${formatDate(task.end_date)}
-                    </span>
-                </div>
-                <p class="task-card-description">
-                    ${task.description ? task.description : "Sin descripción"}
-                </p>
-            `;
-            
-            const taskDelegateForm = card.querySelector(".task-delegate-form");
-            taskDelegateForm.addEventListener('submit', async (event) => {
-                event.preventDefault();
-                const formData = new FormData(taskDelegateForm);
-                const delegatedWorkgroupID = parseInt(formData.get("workgroup"));
-                let body = {
-                    "group_responsible": delegatedWorkgroupID,
-                };                
-
-                await API_UTILS.patch("/tasks/", task.id, body);
-                location.reload();
-            });
-
-            taskList.appendChild(card);
-        });
-
-        // Add Task Modal
+        // Elementos del Modal y Formulario
         const addTaskButton = document.getElementById('add-task-button');
         const modalOverlay = document.getElementById('modal-overlay');
         const modalCloseButton = document.getElementById('modal-close-button');
@@ -185,42 +119,36 @@
         const requirementSelect = document.getElementById('requirement-select');
         const submitButton = document.getElementById('task-submit-button');
         const groupResponsibleSelect = document.getElementById('group-responsible-select');
+        const modalTitle = document.getElementById('criteria-modal-title');
+        const modalDescription = document.getElementById('criteria-modal-description');
 
-        addTaskButton.addEventListener("click", () => {
-            modalOverlay.classList.remove('hidden');
-        });
+        let editingTaskId = null;
 
-        modalCloseButton.addEventListener("click", () => {
-            modalOverlay.classList.add('hidden');
-            modalForm.reset();
-        });
-
+        // Poblar selects estáticos al cargar la página
         requirementSelect.innerHTML = `<option value="" disabled selected>Selecciona un requerimiento...</option>`;
         groupResponsibleSelect.innerHTML = `<option value="" disabled selected>Selecciona un grupo...</option>`;
 
-        const allRequirements = await API_UTILS.get(
-            "/requirements/"
-        );
-
-        const allWorkGroups = await API_UTILS.get(
-            "/work_groups/"
-        );
-
-        for (requirement of allRequirements){
-            const requirmentVersions = await API_UTILS.get_filter_by_column(
+        const allRequirements = await API_UTILS.get("/requirements/");
+        
+        for (const requirement of allRequirements){
+            const requirementVersions = await API_UTILS.get_filter_by_column(
                 "/requirement_versions/", "requirement", requirement.id
             );
 
-            let latestVersion = requirmentVersions[0];
+            if (!requirementVersions || requirementVersions.length === 0) continue;
+
+            let latestVersion = requirementVersions[0];
             let i = 0;
-            while (i < requirmentVersions.length && !latestVersion.is_active){
+            while (i < requirementVersions.length && !latestVersion.is_active){
                 i++;
-                latestVersion = requirmentVersions[i];
+                if (i < requirementVersions.length) {
+                    latestVersion = requirementVersions[i];
+                }
             }
 
-            if (latestVersion.is_active){
+            if (latestVersion && latestVersion.is_active){
                 const selectOption = document.createElement("option");
-                selectOption.value = requirement.id;
+                selectOption.value = latestVersion.id; // Asegurar que sea el ID de la versión del requerimiento
                 selectOption.textContent = `${requirement.title}: ${latestVersion.version_number}`;
                 requirementSelect.appendChild(selectOption);
             }
@@ -232,7 +160,147 @@
             selectOption.textContent = workgroup.name;
             groupResponsibleSelect.appendChild(selectOption);
         }
-        
+
+        function formatDate(dateStr) {
+            if (!dateStr) return "";
+            const date = new Date(dateStr);
+            return date.toLocaleDateString("es-ES", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric"
+            });
+        }
+
+        async function loadTasks() {
+            taskList.innerHTML = '';
+            const criteriaTasks = await API_UTILS.get_filter_by_column(
+                "/tasks/", "criterion", selectedCriteriaID
+            );
+
+            if (!criteriaTasks || criteriaTasks.length === 0) {
+                taskList.innerHTML = '<p class="no-tasks">No hay tareas para este criterio.</p>';
+                return;
+            }
+
+            criteriaTasks.forEach(task => {
+                let workgroupOptions = "";
+                for (const workgroup of workgroups) {
+                    const selected = workgroup.id === task.group_responsible ? " selected" : "";
+                    workgroupOptions += `<option value="${workgroup.id}"${selected}>${workgroup.name}</option>`;
+                }
+                const card = document.createElement("article");
+                card.className = "task-card";
+                card.innerHTML = `
+                    <div class="task-card-header">
+                        <h3>${task.title || "Tarea sin título"}</h3>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <form class="task-delegate-form" style="display:flex;gap:10px">
+                                <div class="workgroup-select form-input">
+                                    <select name="workgroup">
+                                        ${workgroupOptions}
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary delegate-btn">
+                                    Delegar
+                                </button>
+                            </form>
+                            <button class="action-btn edit-task-btn" title="Editar tarea" style="background: none; border: none; cursor: pointer; padding: 4px;">
+                                <img src="{% static 'frontend/svgs/edit.svg' %}" width="16" height="16">
+                            </button>
+                            <button class="action-btn delete-task-btn" title="Eliminar tarea" style="background: none; border: none; cursor: pointer; padding: 4px;">
+                                <img src="{% static 'frontend/svgs/trash.svg' %}" width="16" height="16">
+                            </button>
+                        </div>
+                        <span class="task-card-dates">
+                            ${formatDate(task.start_date)} &ndash; ${formatDate(task.end_date)}
+                        </span>
+                    </div>
+                    <p class="task-card-description">
+                        ${task.description ? task.description : "Sin descripción"}
+                    </p>
+                `;
+                
+                // Listener para delegar tarea
+                const taskDelegateForm = card.querySelector(".task-delegate-form");
+                taskDelegateForm.addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    const formData = new FormData(taskDelegateForm);
+                    const delegatedWorkgroupID = parseInt(formData.get("workgroup"));
+                    let body = {
+                        "group_responsible": delegatedWorkgroupID,
+                    };           
+
+                    await API_UTILS.patch("/tasks/", task.id, body);
+                    loadTasks();
+                });
+
+                // Listener para Editar Tarea
+                const editTaskBtn = card.querySelector(".edit-task-btn");
+                editTaskBtn.addEventListener('click', () => {
+                    openTaskModal(task);
+                });
+
+                // Listener para Eliminar Tarea
+                const deleteTaskBtn = card.querySelector(".delete-task-btn");
+                deleteTaskBtn.addEventListener('click', async () => {
+                    if (confirm(`¿Estás seguro de que deseas eliminar la tarea "${task.title}"?`)) {
+                        try {
+                            await API_UTILS.delete("/tasks/", task.id);
+                            loadTasks();
+                        } catch (error) {
+                            console.error('Error al eliminar:', error);
+                            alert('Ocurrió un error al eliminar la tarea.');
+                        }
+                    }
+                });
+
+                taskList.appendChild(card);
+            });
+        }
+
+        function openTaskModal(taskToEdit = null) {
+            editingTaskId = taskToEdit ? taskToEdit.id : null;
+            modalForm.reset();
+
+            if (taskToEdit) {
+                modalTitle.textContent = `Editar Tarea: ${taskToEdit.title}`;
+                modalDescription.textContent = `Modifica los datos de la tarea.`;
+                submitButton.textContent = 'Guardar Cambios';
+
+                modalForm.querySelector('[name="title"]').value = taskToEdit.title || '';
+                modalForm.querySelector('[name="description"]').value = taskToEdit.description || '';
+                modalForm.querySelector('[name="start_date"]').value = taskToEdit.start_date || '';
+                modalForm.querySelector('[name="end_date"]').value = taskToEdit.end_date || '';
+                if (taskToEdit.requirement_version) {
+                    requirementSelect.value = taskToEdit.requirement_version;
+                }
+                if (taskToEdit.group_responsible) {
+                    groupResponsibleSelect.value = taskToEdit.group_responsible;
+                }
+            } else {
+                modalTitle.textContent = 'Agregar Tarea';
+                modalDescription.textContent = 'Define el título, descripción, requerimiento y fechas de la nueva tarea.';
+                submitButton.textContent = 'Agregar Tarea';
+            }
+
+            modalOverlay.classList.remove('hidden');
+        }
+
+        function closeTaskModal() {
+            modalOverlay.classList.add('hidden');
+            modalForm.reset();
+            editingTaskId = null;
+        }
+
+        addTaskButton.addEventListener("click", () => {
+            openTaskModal();
+        });
+
+        modalCloseButton.addEventListener("click", closeTaskModal);
+        modalOverlay.addEventListener('click', (event) => {
+            if (event.target === event.currentTarget) closeTaskModal();
+        });
+
         modalForm.addEventListener("submit", async (event) =>{
             event.preventDefault();
             event.stopPropagation();
@@ -250,25 +318,29 @@
             
             try{
                 submitButton.disabled = true;
-                submitButton.innerText = 'Agregando...';
+                submitButton.innerText = editingTaskId ? 'Guardando...' : 'Agregando...';
 
-                await API_UTILS.post(
-                    "/tasks/", body
-                );
+                if (editingTaskId) {
+                    await API_UTILS.patch("/tasks/", editingTaskId, body);
+                } else {
+                    await API_UTILS.post("/tasks/", body);
+                }
 
-                alert("¡Tarea creada con éxito!");
-
-                location.reload();
+                closeTaskModal();
+                loadTasks();
             }
             catch (error) {
                 console.error('Error:', error);
-                alert('Ocurrió un error al agregar la tarea.');
+                alert('Ocurrió un error al guardar la tarea.');
             }
             finally{
                 submitButton.disabled = false;
-                submitButton.innerText = 'Agregar Tarea';
+                submitButton.innerText = editingTaskId ? 'Guardar Cambios' : 'Agregar Tarea';
             }
         });
+
+        // Carga inicial de tareas
+        loadTasks();
     });
 </script>
 {% endblock %}
