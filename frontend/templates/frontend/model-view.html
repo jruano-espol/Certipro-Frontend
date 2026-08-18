@@ -6,6 +6,22 @@
 <link rel="stylesheet" href="{% static 'frontend/dashboard.css' %}">
 <link rel="stylesheet" href="{% static 'frontend/model-view.css' %}">
 
+<style>
+    .evidence-status {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 11px;
+        align-self: center;
+        margin-left: 8px;
+        text-transform: uppercase;
+    }
+    .evidence-status.approved { background: #dcfce7; color: #065f46; }
+    .evidence-status.in-review { background: #fff7ed; color: #92400e; }
+    .evidence-status.rejected { background: #fee2e2; color: #991b1b; }
+</style>
+
 <div class="model-view-wrapper">
     <a id="back-button" aria-label="Volver">
         <!-- left arrow icon -->
@@ -298,8 +314,20 @@
 
         const criterionName = `${criterion.code}: ${criterion.title}`;
 
+        // Mapeo de prioridad a clases y etiquetas legibles
+        let priorityClass = 'in-review';
+        let priorityText = criterion.priority || 'Media';
+        if (priorityText === 'Alta') {
+            priorityClass = 'rejected'; // Estilo rojo para alta prioridad
+        } else if (priorityText === 'Baja') {
+            priorityClass = 'approved'; // Estilo verde para baja prioridad
+        } else {
+            priorityClass = 'in-review'; // Estilo naranja para media prioridad
+        }
+
         html += `
             <span class="criterion-name">${criterionName}</span>
+            <span class="evidence-status ${priorityClass}">${priorityText}</span>
             <div class="criterion-actions">
                 <span class="task-count">${criteriaTasks.length} tareas</span>
                 <button class="action-btn view-tasks-btn" title="Ver tareas">
@@ -324,7 +352,7 @@
 
         div.innerHTML = html;
 
-        // Listener para Agregar Subcriterio (Ahora abre el modal pasándole el criterio padre)
+        // Listener para Agregar Subcriterio
         let addSubcriteriaBtn = div.querySelector('.add-subcriteria-btn');
         if (addSubcriteriaBtn) {
             addSubcriteriaBtn.addEventListener('click', () => {

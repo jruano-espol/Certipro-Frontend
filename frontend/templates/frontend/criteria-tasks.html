@@ -6,6 +6,22 @@
 <link rel="stylesheet" href="{% static 'frontend/criteria-tasks.css' %}">
 <link rel="stylesheet" href="{% static 'frontend/dashboard.css' %}">
 
+<style>
+    .evidence-status {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 11px;
+        align-self: center;
+        margin-left: 8px;
+        text-transform: uppercase;
+    }
+    .evidence-status.approved { background: #dcfce7; color: #065f46; }
+    .evidence-status.in-review { background: #fff7ed; color: #92400e; }
+    .evidence-status.rejected { background: #fee2e2; color: #991b1b; }
+</style>
+
 <div class="criteria-tasks-wrapper">
     <a id="back-button" aria-label="Volver">
         <!-- left arrow icon -->
@@ -148,7 +164,7 @@
 
             if (latestVersion && latestVersion.is_active){
                 const selectOption = document.createElement("option");
-                selectOption.value = latestVersion.id; // Asegurar que sea el ID de la versión del requerimiento
+                selectOption.value = latestVersion.id;
                 selectOption.textContent = `${requirement.title}: ${latestVersion.version_number}`;
                 requirementSelect.appendChild(selectOption);
             }
@@ -173,7 +189,7 @@
 
         async function loadTasks() {
             taskList.innerHTML = '';
-            const criteriaTasks = await API_UTILS.get_filter_by_column(
+            let criteriaTasks = await API_UTILS.get_filter_by_column(
                 "/tasks/", "criterion", selectedCriteriaID
             );
 
@@ -182,17 +198,35 @@
                 return;
             }
 
+            // Categorizamos las tareas usando la función de API_UTILS
+            criteriaTasks = await API_UTILS.categorize_tasks(criteriaTasks);
+
             criteriaTasks.forEach(task => {
                 let workgroupOptions = "";
                 for (const workgroup of workgroups) {
                     const selected = workgroup.id === task.group_responsible ? " selected" : "";
                     workgroupOptions += `<option value="${workgroup.id}"${selected}>${workgroup.name}</option>`;
                 }
+
+                // Mapeo del estado calculado a clases y etiquetas legibles
+                let statusClass = 'in-review';
+                let statusText = task.status || 'Pendiente';
+                if (statusText === 'Aceptada') {
+                    statusClass = 'approved';
+                } else if (statusText === 'Pendiente') {
+                    statusClass = 'rejected';
+                } else {
+                    statusClass = 'in-review';
+                }
+
                 const card = document.createElement("article");
                 card.className = "task-card";
                 card.innerHTML = `
                     <div class="task-card-header">
-                        <h3>${task.title || "Tarea sin título"}</h3>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <h3>${task.title || "Tarea sin título"}</h3>
+                            <span class="evidence-status ${statusClass}">${statusText}</span>
+                        </div>
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <form class="task-delegate-form" style="display:flex;gap:10px">
                                 <div class="workgroup-select form-input">
@@ -228,7 +262,7 @@
                     const delegatedWorkgroupID = parseInt(formData.get("workgroup"));
                     let body = {
                         "group_responsible": delegatedWorkgroupID,
-                    };           
+                    };          
 
                     await API_UTILS.patch("/tasks/", task.id, body);
                     loadTasks();
