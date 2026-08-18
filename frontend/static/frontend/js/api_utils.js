@@ -96,10 +96,70 @@ const API_UTILS = {
                 const uploadedEvidences = await API_UTILS.get_filter_by_column(
                     "/uploaded_evidences/", "required_evidence", requiredEvidence.id
                 );
-                if(uploadedEvidences){
-                    for(const uploadedEvidence of uploadedEvidences){
-                        const feedbacks = await API_UTILS.get_filter_by_column(
-                            "/feedbacks/", "uploaded_evidence", uploadedEvidence.id
+                if(uploadedEvidences.length > 0){
+                    const feedbacks = await this.get_filter_by_column(
+                        "/feedbacks/", "uploaded_evidence", uploadedEvidences[0].id
+                    );
+
+                    if (feedbacks.length > 0){
+                        if(feedbacks[0].result_type === "REJECT"){
+                            status = "Pendiente";
+                            break;
+                        }
+                    }
+                    else{
+                        status = "En Revisión";
+                    }
+                    
+                }
+                else{
+                    status = "Pendiente";
+                }
+            }
+
+            task.status = status;
+        }
+        return tasks;
+    },
+
+    async categorize_requirements(requirements){
+        for (requirement of requirements){
+            let status = "Desconocido";
+            let evidence_count = 0;
+
+            const requirementVersions = await this.get_filter_by_column(
+                "/requirement_versions/", "requirement", requirement.id
+            );
+
+            if (!requirementVersions || requirementVersions.length === 0) continue;
+
+            let latestVersion = requirementVersions[0];
+            let i = 0;
+            while (i < requirementVersions.length && !latestVersion.is_active){
+                i++;
+                if (i < requirementVersions.length) {
+                    latestVersion = requirementVersions[i];
+                }
+            }
+
+            if (latestVersion && latestVersion.is_active){
+                console.log("ENCIENIOERIJBTRNB");
+                const requiredEvidences = await this.get_filter_by_column(
+                    "/required_evidences/", "requirement_version", latestVersion.id
+                );
+
+                evidence_count = requiredEvidences.length;
+
+                for (const requiredEvidence of requiredEvidences){
+                    const uploadedEvidences = await this.get_filter_by_column(
+                        "/uploaded_evidences/", "required_evidence", requiredEvidence.id
+                    );
+                    if(uploadedEvidences.length > 0){
+                        const latestEvidence = uploadedEvidences[0];
+                        status = "Aceptada";
+
+                        const feedbacks = await this.get_filter_by_column(
+                            "/feedbacks/", "uploaded_evidence", latestEvidence.id
                         );
 
                         if (feedbacks.length > 0){
@@ -111,15 +171,16 @@ const API_UTILS = {
                         else{
                             status = "En Revisión";
                         }
+                        
+                    }
+                    else{
+                        status = "Pendiente";
                     }
                 }
-                else{
-                    status = "Pendiente";
-                }
             }
-
-            task.status = status;
+            requirement.status = status;
+            requirement.evidence_count = evidence_count;
         }
-        return tasks;
+        return requirements;
     }
 };

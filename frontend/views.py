@@ -39,6 +39,12 @@ def dashboard_supervisor(request):
 def certification_models(request):
     return render(request, "frontend/certification-models.html", {'api_url': api_url})
 
+def requirements(request):
+    return render(request, "frontend/requirements.html", {'api_url': api_url})
+
+def requirement_view(request):
+    return render(request, "frontend/requirement-view.html", {'api_url': api_url})
+
 def new_certification_model(request):
     return render(request, "frontend/new-certification-model.html", {'api_url': api_url})
 

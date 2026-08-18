@@ -1,0 +1,270 @@
+{% extends "frontend/base.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'frontend/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'frontend/certification-models.css' %}">
+
+<div class="dashboard-page">
+    <aside class="dashboard-sidebar">
+        <div class="sidebar-brand">
+            <img src="{% static 'frontend/svgs/certificate.svg'%}" width="32" height="32">
+            <div class="brand-text">
+                <div class="brand-title">CertiPro</div>
+                <div class="brand-subtitle">Gestión de Certificaciones</div>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="{% url 'dashboard' %}" class="sidebar-link">
+                <span>
+                    <img src="{% static 'frontend/svgs/dashboard.svg' %}" width="22" height="22">
+                </span>
+                <span>Panel Principal</span>
+            </a>
+            <a href="{% url 'certification_models' %}" class="sidebar-link">
+                <span>
+                    <img src="{% static 'frontend/svgs/medal-star.svg' %}" width="22" height="22">
+                </span>
+                <span>Modelos de Certificación</span>
+            </a>
+            <a href="{% url 'organizational_structure' %}" class="sidebar-link">
+                <span>
+                    <img src="{% static 'frontend/svgs/group.svg' %}" width="22" height="22">
+                </span>
+                <span>Estructura Organizacional</span>
+            </a>
+            <a href="#" class="sidebar-link active" onclick="event.preventDefault();">
+                <span>
+                    <img src="{% static 'frontend/svgs/goal.svg' %}" width="22" height="22">
+                </span>
+                <span>Requerimientos</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-panel">
+                <div id="sidebar-user-avatar" class="user-avatar"></div>
+                <div class="user-info">
+                    <div id="sidebar-user-name" class="user-name"></div>
+                    <div id="sidebar-user-role" class="user-role"></div>
+                </div>
+            </div>
+            <a href="#" id="log-out" class="sign-out">Cerrar Sesión</a>
+        </div>
+    </aside>
+
+    <main class="dashboard-main">
+        <header class="dashboard-header">
+            <div class="search-box">
+                <span>
+                    <img src="{% static 'frontend/svgs/search.svg' %}" width="22" height="22">
+                </span>
+                <input type="text" placeholder="Buscar criterios, tareas..." />
+            </div>
+            <div class="header-user">
+                <div id="header-user-name" class="header-user-name"></div>
+                <div id="header-user-role" class="header-user-role"></div>
+            </div>
+        </header>
+
+        <section class="dashboard-content">
+            <div id="models-list-view" class="models-list-view">
+                <div class="certification-header">
+                    <div>
+                        <h2 id="certification-header-title">Gestión de Requerimientos</h2>
+                        <p id="certification-header-subtitle">Gestiona los requerimientos y accede a sus versiones.</p>
+                    </div>
+                    <button id="nuevo-requerimiento" class="plus-button">
+                        <img src="{% static 'frontend/svgs/plus.svg' %}" width="22" height="22">
+                        Nuevo Requerimiento
+                    </button>
+                </div>
+
+                <!-- Grid de cards: se puebla dinámicamente via JS -->
+                <div id="models-grid" class="models-grid"></div>
+            </div>
+        </section>
+    </main>
+
+    <div id="modelo-modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modelo-modal-title">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="modelo-modal-title">Nuevo Requerimiento</h3>
+                <button type="button" id="modelo-modal-close" class="modal-close-button" aria-label="Cerrar">×</button>
+            </div>
+            <div class="modal-description">Define los datos del nuevo requerimiento.</div>
+            <form id="certification-form" class="modal-form" novalidate>
+                <div class="modal-fields">
+                    <div class="modal-field">
+                        <span>Título del Requerimiento <span style="color: #d32f2f;">*</span></span>
+                        <input id="model-title" type="text" placeholder="Ej: Política de Seguridad de la Información">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" id="modelo-submit-btn" class="modal-submit-button">Crear Requerimiento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function renderRequirements(requirements) {
+        const grid = document.getElementById('models-grid');
+        grid.innerHTML = '';
+
+        if (!requirements || requirements.length === 0) {
+            grid.innerHTML = '<div class="models-empty">No hay requerimientos registrados aún.</div>';
+            return;
+        }
+
+        requirements.forEach(req => {
+            const card = document.createElement('div');
+            card.className = 'model-card';
+            card.dataset.id = req.id;
+
+            // Determinar estilo del badge según el estado
+            let badgeClass = 'approved';
+            if (req.status === 'Pendiente') badgeClass = 'rejected';
+            else if (req.status === 'En Revisión') badgeClass = 'in-review';
+            else if (req.status === 'Desconocido') badgeClass = 'unknown';
+
+            card.innerHTML = `
+                <div class="model-card-top">
+                    <div class="model-card-info">
+                        <span class="evidence-status ${badgeClass}">${req.status}</span>
+                        <h3 class="model-card-title">${req.title}</h3>
+                    </div>
+                    <span class="model-card-arrow">›</span>
+                </div>
+                <hr class="model-card-divider">
+                <div class="model-card-bottom">
+                    <span class="model-card-criteria">${req.evidence_count} evidencias requeridas</span>
+                </div>
+            `;
+
+            card.addEventListener('click', () => {
+                localStorage.setItem('selected_requirement_id', req.id);
+                window.location.href = "{% url 'requirement_view' %}";
+            });
+            grid.appendChild(card);
+        });
+    }
+
+    // ── Cargar requerimientos desde la API
+    async function loadRequirements(accessToken) {
+        const grid = document.getElementById('models-grid');
+        grid.innerHTML = '<div class="models-empty">Cargando requerimientos...</div>';
+
+        try {
+            let requirements = await API_UTILS.get("/requirements/");
+            requirements = await API_UTILS.categorize_requirements(requirements);
+            console.log("AAAAAAAAAAAAAAAAAAA", requirements);
+
+            renderRequirements(requirements);
+
+        } catch (err) {
+            console.error('Error cargando requerimientos:', err);
+            grid.innerHTML = '<div class="models-empty">Error al cargar los requerimientos. Intente de nuevo.</div>';
+        }
+    }
+
+    // ── Init ────────────────────────────────────────────────────────────────
+    document.addEventListener("DOMContentLoaded", async () => {
+        const modeloModalOverlay = document.getElementById('modelo-modal-overlay');
+        const modeloModalClose = document.getElementById('modelo-modal-close');
+        const certificationForm = document.getElementById('certification-form');
+        const modeloSubmitBtn = document.getElementById('modelo-submit-btn');
+
+        function openModeloModal() {
+            modeloModalOverlay.classList.remove('hidden');
+        }
+
+        function closeModeloModal() {
+            modeloModalOverlay.classList.add('hidden');
+            certificationForm.reset();
+        }
+
+        document.getElementById("nuevo-requerimiento").addEventListener("click", () => {
+            openModeloModal();
+        });
+
+        modeloModalClose.addEventListener('click', closeModeloModal);
+        modeloModalOverlay.addEventListener('click', (event) => {
+            if (event.target === event.currentTarget) closeModeloModal();
+        });
+
+        certificationForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const modelTitle = document.getElementById('model-title').value.trim();
+
+            if (!modelTitle) {
+                alert('Por favor, complete el título del requerimiento.');
+                return;
+            }
+
+            const payload = { title: modelTitle };
+
+            try {
+                modeloSubmitBtn.disabled = true;
+                modeloSubmitBtn.innerText = 'Creando...';
+
+                const response = await fetch("{{api_url}}" + "/requirements/", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    closeModeloModal();
+                    await loadRequirements(accessToken);
+                } else {
+                    const errorData = await response.json();
+                    alert(`Error al crear el requerimiento: ${errorData.detail || 'Error desconocido'}`);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Ocurrió un error al crear el requerimiento.');
+            } finally {
+                modeloSubmitBtn.disabled = false;
+                modeloSubmitBtn.innerText = 'Crear Requerimiento';
+            }
+        });
+
+        const accessToken = localStorage.getItem('access_token');
+        const userMetadataStr = localStorage.getItem('user_metadata');
+
+        if (!accessToken || !userMetadataStr) {
+            localStorage.clear();
+            window.location.href = "{% url 'select_profile' %}";
+            return;
+        }
+
+        const user = JSON.parse(userMetadataStr);
+
+        const names = user.full_name.trim().split(" ");
+        const initials = names.length > 1
+            ? (names[0][0] + names[names.length - 1][0]).toUpperCase()
+            : names[0][0].toUpperCase();
+
+        document.getElementById('sidebar-user-avatar').innerText = initials;
+        document.getElementById('sidebar-user-name').innerText = user.full_name;
+        document.getElementById('sidebar-user-role').innerText = user.role;
+
+        document.getElementById('header-user-name').innerText = user.full_name;
+        document.getElementById('header-user-role').innerText = user.role;
+
+        document.getElementById('log-out').addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.clear();
+            window.location.href = "{% url 'select_profile' %}";
+        });
+
+        await loadRequirements(accessToken);
+    });
+</script>
+{% endblock %}
