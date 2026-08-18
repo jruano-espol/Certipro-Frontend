@@ -4,6 +4,7 @@
 {% block content %}
 <link rel="stylesheet" href="{% static 'frontend/style.css' %}">
 <link rel="stylesheet" href="{% static 'frontend/criteria-tasks.css' %}">
+<link rel="stylesheet" href="{% static 'frontend/dashboard.css' %}">
 
 <div class="criteria-tasks-wrapper">
     <a id="back-button" aria-label="Volver">
@@ -15,15 +16,70 @@
     </a>
 
     <div class="page-shell">
-        <div id="tasks-title">
-            <div id="tasks-title-content">
-                <img src="{% static 'frontend/svgs/task.svg' %}" width="24" height="24">
-                <h2 id="tasks-title-text">Tareas del criterio</h2>
+        <div>
+            <div id="tasks-title">
+                <div id="tasks-title-content">
+                    <img src="{% static 'frontend/svgs/task.svg' %}" width="24" height="24">
+                    <h2 id="tasks-title-text">Tareas del criterio</h2>
+                </div>
             </div>
+            <button id="add-task-button" class="plus-button">
+                <img src="{% static 'frontend/svgs/plus.svg'%}" width="22" height="22">
+                Agregar Tarea
+            </button>
         </div>
         <div id="task-list">
             <!-- task cards will be dynamically added here with javascript -->
         </div>
+    </div>
+</div>
+
+<div id="modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="criteria-modal-title">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 id="criteria-modal-title">Agregar Tarea</h3>
+            <button type="button" id="modal-close-button" class="modal-close-button" aria-label="Cerrar">×</button>
+        </div>
+        <div class="modal-description" id="criteria-modal-description">Define el título, descripción, requerimiento y fechas de la nueva tarea.</div>
+        <form id="modal-form" class="modal-form">
+            <div class="modal-fields">
+                <div class="modal-field">
+                    <span>Título <span style="color: #d32f2f;">*</span></span>
+                    <input type="text" name="title" placeholder="Ej. Alcance del Sistema" required>
+                </div>
+
+                <div class="modal-field">
+                    <span>Descripción</span>
+                    <textarea name="description" placeholder="Describe el criterio..." style="width: 100%; padding: 12px 14px; border: 1px solid #dce4ee; border-radius: 14px; background: #fff; color: #0f1724; font-size: 14px; font-family: inherit; min-height: 100px; resize: vertical;"></textarea>
+                </div>
+
+                
+                <div class="modal-field">
+                    <span>Requerimiento <span style="color: #d32f2f;">*</span></span>
+                    <select id="requirement-select" name="requirement-version" style="width: 100%; padding: 12px 14px; border: 1px solid #dce4ee; border-radius: 14px; background: #fff; color: #0f1724; font-size: 14px;">
+                    </select>
+                </div>
+
+                <div class="modal-field">
+                    <span>Fecha de Inicio <span style="color: #d32f2f;">*</span></span>
+                    <input type="date" name="start_date" style="width: 100%; padding: 12px 14px; border: 1px solid #dce4ee; border-radius: 14px; background: #fff; color: #0f1724; font-size: 14px;" required>
+                </div>
+
+                <div class="modal-field">
+                    <span>Fecha de Finalización <span style="color: #d32f2f;">*</span></span>
+                    <input type="date" name="end_date" style="width: 100%; padding: 12px 14px; border: 1px solid #dce4ee; border-radius: 14px; background: #fff; color: #0f1724; font-size: 14px;" required>
+                </div>
+
+                <div class="modal-field">
+                    <span>Grupo Responsable <span style="color: #d32f2f;">*</span></span>
+                    <select id="group-responsible-select" name="group_responsible" style="width: 100%; padding: 12px 14px; border: 1px solid #dce4ee; border-radius: 14px; background: #fff; color: #0f1724; font-size: 14px;" required>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="submit" id="task-submit-button" class="modal-submit-button">Agregar Tarea</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -119,6 +175,99 @@
             });
 
             taskList.appendChild(card);
+        });
+
+        // Add Task Modal
+        const addTaskButton = document.getElementById('add-task-button');
+        const modalOverlay = document.getElementById('modal-overlay');
+        const modalCloseButton = document.getElementById('modal-close-button');
+        const modalForm = document.getElementById('modal-form');
+        const requirementSelect = document.getElementById('requirement-select');
+        const submitButton = document.getElementById('task-submit-button');
+        const groupResponsibleSelect = document.getElementById('group-responsible-select');
+
+        addTaskButton.addEventListener("click", () => {
+            modalOverlay.classList.remove('hidden');
+        });
+
+        modalCloseButton.addEventListener("click", () => {
+            modalOverlay.classList.add('hidden');
+            modalForm.reset();
+        });
+
+        requirementSelect.innerHTML = `<option value="" disabled selected>Selecciona un requerimiento...</option>`;
+        groupResponsibleSelect.innerHTML = `<option value="" disabled selected>Selecciona un grupo...</option>`;
+
+        const allRequirements = await API_UTILS.get(
+            "/requirements/"
+        );
+
+        const allWorkGroups = await API_UTILS.get(
+            "/work_groups/"
+        );
+
+        for (requirement of allRequirements){
+            const requirmentVersions = await API_UTILS.get_filter_by_column(
+                "/requirement_versions/", "requirement", requirement.id
+            );
+
+            let latestVersion = requirmentVersions[0];
+            let i = 0;
+            while (i < requirmentVersions.length && !latestVersion.is_active){
+                i++;
+                latestVersion = requirmentVersions[i];
+            }
+
+            if (latestVersion.is_active){
+                const selectOption = document.createElement("option");
+                selectOption.value = requirement.id;
+                selectOption.textContent = `${requirement.title}: ${latestVersion.version_number}`;
+                requirementSelect.appendChild(selectOption);
+            }
+        }
+
+        for (const workgroup of workgroups) {
+            const selectOption = document.createElement("option");
+            selectOption.value = workgroup.id;
+            selectOption.textContent = workgroup.name;
+            groupResponsibleSelect.appendChild(selectOption);
+        }
+        
+        modalForm.addEventListener("submit", async (event) =>{
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const formData = new FormData(modalForm);
+            const body = {
+                "title": formData.get("title"),
+                "description": formData.get("description"),
+                "requirement_version": parseInt(formData.get("requirement-version")),
+                "start_date": formData.get("start_date"),
+                "end_date": formData.get("end_date"),
+                "criterion": parseInt(selectedCriteriaID),
+                "group_responsible": parseInt(formData.get("group_responsible"))
+            };
+            
+            try{
+                submitButton.disabled = true;
+                submitButton.innerText = 'Agregando...';
+
+                await API_UTILS.post(
+                    "/tasks/", body
+                );
+
+                alert("¡Tarea creada con éxito!");
+
+                location.reload();
+            }
+            catch (error) {
+                console.error('Error:', error);
+                alert('Ocurrió un error al agregar la tarea.');
+            }
+            finally{
+                submitButton.disabled = false;
+                submitButton.innerText = 'Agregar Tarea';
+            }
         });
     });
 </script>

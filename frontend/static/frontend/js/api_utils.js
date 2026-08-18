@@ -75,7 +75,7 @@ const API_UTILS = {
         return await this.fetch(`${endpoint}${id}/`, 'PATCH', body);
     },
 
-    async categorize_tasks(tasks){        
+    async categorize_tasks(tasks){
         for (const task of tasks) {
             let status = "Aceptada";
 

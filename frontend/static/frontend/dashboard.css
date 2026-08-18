@@ -717,3 +717,19 @@ main {
 .evidence-status.in-review { background: #fff7ed; color: #92400e; }
 .evidence-status.rejected { background: #fee2e2; color: #991b1b; }
 .evidence-status.unknown { background: #f1f5f9; color: #475569; }
+
+.plus-button{
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #0b3b66;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 14px;
+    transition: opacity 0.2s;
+    font-family: inherit;
+}

@@ -338,12 +338,19 @@
         async function loadBranches() {
             const allBranches = await API_UTILS.get('/branches/') || [];
             branchesList.innerHTML = '';
+
             if (allBranches.length === 0) {
                 branchesList.innerHTML = '<div class="empty-state">No se encontraron sucursales.</div>';
                 return;
             }
 
             for (const branch of allBranches) {
+                console.log("BRANCH:");
+                console.log(branch);
+                if (!branch.supervisor){
+                    continue;
+                }
+
                 const branchSupervisor = await API_UTILS.get_filter_by_column(
                     '/users/', 'id', branch.supervisor
                 );
@@ -408,6 +415,9 @@
             branchDetails.innerHTML = '';
 
             for (const department of branchDepartments) {
+                if (!department.supervisor){
+                    continue;
+                }
                 const departmentSupervisor = await API_UTILS.get_filter_by_column('/users/', 'id', department.supervisor) || [];
                 const departmentWorkGroups = await API_UTILS.get_filter_by_column('/work_groups/', 'department', department.id) || [];
 
@@ -433,6 +443,9 @@
                     workgroupsContainer.innerHTML = '<div class="empty-state">No se encontraron grupos de trabajo.</div>';
                 } else {
                     for (const workGroup of departmentWorkGroups) {
+                        if (!workGroup.supervisor){
+                            continue;
+                        }
                         const workGroupSupervisor = await API_UTILS.get_filter_by_column('/users/', 'id', workGroup.supervisor) || [];
                         const workGroupMembers = await API_UTILS.get_filter_by_column('/work_group_members/', 'workgroup', workGroup.id) || [];
 
