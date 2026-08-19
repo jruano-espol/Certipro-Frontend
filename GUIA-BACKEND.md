@@ -463,3 +463,51 @@ Método: GET
     "evaluator": <id del usuario supervisor>
 }
 ```
+
+### Notificaciones (Notifications)
+Se generan automáticamente en el backend: cuando un supervisor deja un
+`Feedback` con `result_type = "REJECT"` sobre una evidencia, se crea una
+notificación para cada miembro del grupo de trabajo responsable de la tarea
+(US-F15). No existe un POST manual para crearlas.
+
+Obtener las notificaciones del usuario autenticado (siempre filtradas al
+usuario del token, nunca se ven notificaciones de otros usuarios):
+
+Endpoint: `/notifications/`
+
+Método: GET
+
+**Filtrar por leídas/no leídas**
+
+Endpoint: `/notifications/?is_read=false`
+
+Método: GET
+
+**Marcar una notificación como leída**
+
+Endpoint: `/notifications/<id>/mark_read/`
+
+Método: POST (sin body)
+
+**Marcar todas las notificaciones como leídas**
+
+Endpoint: `/notifications/mark_all_read/`
+
+Método: POST (sin body)
+
+**Forma de la respuesta:**
+
+```JSON
+{
+    "id": 1,
+    "notification_type": "EVIDENCE_REJECTED",
+    "message": "Tu evidencia \"...\" para la tarea \"...\" fue rechazada. Motivo: ...",
+    "is_read": false,
+    "created_at": "2026-08-13T12:00:00Z",
+    "recipient": 4,
+    "uploaded_evidence": 10,
+    "feedback": 7,
+    "task_title": "Carga de Informes",
+    "required_evidence_title": "Informe General"
+}
+```

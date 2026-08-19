@@ -159,6 +159,30 @@ main {
     text-align: right;
 }
 
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+.header-bell {
+    position: relative;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.bell-dot {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 8px;
+    height: 8px;
+    background: #22c55e;
+    border-radius: 50%;
+    border: 1.5px solid #fff;
+}
+
 .header-user-name {
     font-weight: 700;
     font-size: 15px;

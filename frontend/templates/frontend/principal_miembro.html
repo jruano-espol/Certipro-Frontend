@@ -3,6 +3,7 @@
 
 {% block content %}
     <link rel="stylesheet" href="{% static 'frontend/principal_miembro.css' %}">
+    <link rel="stylesheet" href="{% static 'frontend/notifications.css' %}">
 
     <div class="dashboard-page">
         <aside class="dashboard-sidebar">
@@ -232,7 +233,7 @@ async function cargarPanel() {
         renderTareas(tareas);
 
         // Evidencias rechazadas
-        const evidencias = await apiFetchFetch('/uploaded_evidences/');
+        const evidencias = await apiFetch('/uploaded_evidences/');
         const rechazadas = [];
         for (const ev of evidencias) {
             const feedbacks = await apiFetch(`/feedbacks/?uploaded_evidence=${ev.id}`);
@@ -317,4 +318,8 @@ function renderRechazadas(items) {
 document.addEventListener('DOMContentLoaded', cargarPanel);
 </script>
 
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'frontend/js/notifications.js' %}"></script>
 {% endblock %}

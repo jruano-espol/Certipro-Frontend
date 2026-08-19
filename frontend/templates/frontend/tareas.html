@@ -3,6 +3,7 @@
 
 {% block content %}
     <link rel="stylesheet" href="{% static 'frontend/tareas.css' %}">
+    <link rel="stylesheet" href="{% static 'frontend/notifications.css' %}">
 
     <style>
         /* ---- Vista detalle ---- */
@@ -738,4 +739,8 @@ function abrirSubida() {
 document.addEventListener('DOMContentLoaded', cargarTareas);
 </script>
 
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'frontend/js/notifications.js' %}"></script>
 {% endblock %}

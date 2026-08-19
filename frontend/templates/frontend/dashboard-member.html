@@ -4,6 +4,7 @@
 {% block content %}
 <link rel="stylesheet" href="{% static 'frontend/dashboard.css' %}">
 <link rel="stylesheet" href="{% static 'frontend/dashboard-member.css' %}">
+<link rel="stylesheet" href="{% static 'frontend/notifications.css' %}">
 
 <div class="dashboard-page">
     <aside class="dashboard-sidebar">
@@ -44,9 +45,15 @@
                 </span>
                 <input type="text" placeholder="Buscar criterios, tareas..." />
             </div>
-            <div class="header-user">
-                <div id="header-user-name" class="header-user-name"></div>
-                <div id="header-user-role" class="header-user-role"></div>
+            <div class="header-right">
+                <div class="header-bell">
+                    <img src="{% static 'frontend/svgs/bell.svg' %}" width="20" height="20">
+                    <span class="bell-dot"></span>
+                </div>
+                <div class="header-user">
+                    <div id="header-user-name" class="header-user-name"></div>
+                    <div id="header-user-role" class="header-user-role"></div>
+                </div>
             </div>
         </header>
 
@@ -345,5 +352,7 @@
         });
     });
 </script>
+
+<script src="{% static 'frontend/js/notifications.js' %}"></script>
 
 {% endblock %}
